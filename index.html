@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kanji Radicals</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Kanji Radicals</h1>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="radicals">Radicals</button>
+      <button class="tab" data-tab="kanji">Kanji</button>
+    </nav>
+    <div class="menu-wrapper">
+      <button id="settings-menu-btn" class="icon-btn" title="Menu" aria-label="Menu">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <line x1="4" y1="7" x2="20" y2="7" stroke-linecap="round"/>
+          <line x1="4" y1="12" x2="20" y2="12" stroke-linecap="round"/>
+          <line x1="4" y1="17" x2="20" y2="17" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div id="settings-menu" class="dropdown-menu hidden">
+        <button id="link-folder-btn" class="menu-item" title="Link this app's folder for automatic sync (Chrome/Edge)">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M3 7a1 1 0 0 1 1-1h4.5l1.5 2H20a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Config Folder</span>
+        </button>
+        <button id="export-btn" class="menu-item" title="Download your progress as progress.json">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M12 3v11m0-11 4 4m-4-4-4 4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Export Progress</span>
+        </button>
+        <label class="menu-item" title="Load a progress.json file">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M12 14V3m0 11-4-4m4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Import Progress</span>
+          <input type="file" id="import-input" accept="application/json" hidden />
+        </label>
+        <div id="sync-status" class="sync-status"></div>
+        <hr class="menu-divider" />
+        <button id="ai-text-menu-btn" class="menu-item" title="Build an AI writing-practice prompt from your known kanji">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.5 5.5l2.5 2.5M16 16l2.5 2.5M18.5 5.5 16 8M8 16l-2.5 2.5" stroke-linecap="round"/>
+          </svg>
+          <span>AI Text</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="app">
+    <section id="radicals-view" class="view"></section>
+    <section id="kanji-view" class="view hidden"></section>
+    <section id="ai-text-view" class="view hidden"></section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <div id="detail-overlay" class="overlay hidden">
+    <div class="detail-panel">
+      <div class="detail-panel-top">
+        <button id="detail-back" class="ghost-btn hidden">&larr; Back</button>
+        <button id="detail-close" class="ghost-btn">Close</button>
+      </div>
+      <div id="detail-content"></div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    Radical/kanji decomposition and readings/meanings from
+    <a href="https://www.edrdg.org/krad/kradinf.html" target="_blank" rel="noopener">KRADFILE/RADKFILE &amp; KANJIDIC2</a>
+    (EDRDG, used under the EDRDG Licence). JLPT levels from
+    <a href="http://www.tanos.co.uk/jlpt/" target="_blank" rel="noopener">Jonathan Waller's JLPT Resources</a>.
+    Stroke order diagrams from
+    <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener">KanjiVG</a>
+    (© Ulrich Apel, CC BY-SA 3.0).
+  </footer>
+
+  <script src="data/radicals.js"></script>
+  <script src="data/kanji.js"></script>
+  <script src="data/jlpt.js"></script>
+  <script src="data/kanjidic.js"></script>
+  <script src="data/strokes.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/fileSync.js"></script>
+  <script src="js/strokeOrder.js"></script>
+  <script src="js/detailPanel.js"></script>
+  <script src="js/radicalsView.js"></script>
+  <script src="js/kanjiView.js"></script>
+  <script src="js/aiText.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
