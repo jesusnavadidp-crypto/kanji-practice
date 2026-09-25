@@ -5,11 +5,21 @@ A minimal, static, offline-first app for drilling Japanese radicals and kanji:
 - **Radicals** tab — all 253 KRADFILE/RADKFILE radicals grouped by stroke count.
 - **Kanji** tab — kanji whose components you've ranked highly enough to be worth
   learning, grouped by JLPT level ascending (N5 → N1, then untagged). Toggle
-  "Show all kanji" to browse everything, ~12,150 entries.
-- Click any character to open its detail panel: on'yomi/kun'yomi/meaning (when
-  known), an animated stroke-order diagram (Slow/Normal speed), sub-components
-  (if any, drill in recursively), a link to Jisho, and a rank selector — also
-  usable with the 1–4 keys while the panel is open.
+  "Show all kanji" to browse everything, ~12,150 entries. Search matches an
+  exact character, or as a substring against its on'yomi/kun'yomi readings or
+  English meaning.
+- Click any character to open its detail panel: rank selector, the character,
+  concept/kun'yomi/on'yomi (when known), an animated stroke-order diagram with
+  a Replay/Fast/Slow icon menu beside it, then an ETC section with the Jisho
+  link and sub-components (if any, drill in recursively) — the rank selector
+  is also usable with the 1–4 keys while the panel is open. From the Kanji
+  tab, move to the next/previous kanji without closing the panel via the
+  arrow buttons, a swipe, or the ←/→ keys.
+- **Test** tab — flashcard drill over the kanji you've ranked Learning+: flip
+  a random card to reveal its readings, meaning and stroke order, mark
+  yourself Correct/Incorrect, and keep going. A combo box lets you adjust the
+  learn status right from the card. The ✕ button ends the session and shows a
+  report (total tested, correct, incorrect).
 - **AI Text** (in the ☰ menu) — builds a writing-practice prompt for an LLM
   from the kanji you've ranked Learning+, with a topic/length/chapter count
   form and a one-click Copy to Clipboard.

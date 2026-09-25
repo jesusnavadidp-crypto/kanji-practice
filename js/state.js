@@ -7,6 +7,10 @@
 window.State = (() => {
   const STORAGE_KEY = 'kanji-radicals:progress';
 
+  // Single source of truth for the rank scale, shared by every view that lets
+  // the user set or display a rank (detail panel, test view).
+  const RANK_LABELS = ['Unknown', 'Learning', 'Familiar', 'Known'];
+
   const readLocalStorage = () => {
     try {
       return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
@@ -42,5 +46,5 @@ window.State = (() => {
     return () => listeners.delete(listener);
   };
 
-  return { getRank, setRank, getAllRanks, replaceAllRanks, onChange };
+  return { RANK_LABELS, getRank, setRank, getAllRanks, replaceAllRanks, onChange };
 })();
