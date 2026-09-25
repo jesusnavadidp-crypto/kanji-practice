@@ -9,11 +9,13 @@
   const { initDetailPanel, refreshDetailIfOpen } = window.DetailPanel;
   const { renderRadicalsView, refreshRadicalRanks } = window.RadicalsView;
   const { renderKanjiView, refreshKanjiRanks } = window.KanjiView;
+  const { renderTestView, refreshTestIfEmpty } = window.TestView;
   const { renderAiTextView, refreshKnownCount } = window.AiText;
 
   const views = {
     radicals: document.getElementById('radicals-view'),
     kanji: document.getElementById('kanji-view'),
+    test: document.getElementById('test-view'),
     aiText: document.getElementById('ai-text-view'),
   };
 
@@ -64,12 +66,14 @@
     initDetailPanel(dataset);
     renderRadicalsView(dataset);
     renderKanjiView(dataset);
+    renderTestView(dataset);
     renderAiTextView(dataset);
 
     onChange(() => {
       refreshRadicalRanks();
       refreshKanjiRanks();
       refreshDetailIfOpen();
+      refreshTestIfEmpty();
       refreshKnownCount();
     });
   };

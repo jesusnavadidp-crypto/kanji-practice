@@ -10,6 +10,10 @@ window.StrokeOrder = (() => {
   const getSpeed = () => (localStorage.getItem(SPEED_KEY) === 'slow' ? 'slow' : 'normal');
   const setSpeed = (speed) => localStorage.setItem(SPEED_KEY, speed);
 
+  const replayIconSvg = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 15a8 8 0 1 0 2-8.5L4 10" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const fastIconSvg = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const slowIconSvg = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
   const animate = (svg) => {
     const durationMs = SPEED_MS[getSpeed()];
     const paths = [...svg.querySelectorAll('path')];
@@ -42,26 +46,21 @@ window.StrokeOrder = (() => {
 
     const speed = getSpeed();
     container.innerHTML = `
-      <div class="stroke-order-svg">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEW_SIZE} ${VIEW_SIZE}">${pathTags}</svg>
-      </div>
-      <div class="stroke-order-controls">
-        <div class="speed-toggle">
-          <button class="speed-btn${speed === 'slow' ? ' selected' : ''}" data-speed="slow">Slow</button>
-          <button class="speed-btn${speed === 'normal' ? ' selected' : ''}" data-speed="normal">Normal</button>
+      <div class="stroke-order-row">
+        <div class="stroke-order-svg">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEW_SIZE} ${VIEW_SIZE}">${pathTags}</svg>
         </div>
-        <button class="ghost-btn stroke-replay-btn" title="Replay" aria-label="Replay">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path d="M4 4v6h6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M4.5 15a8 8 0 1 0 2-8.5L4 10" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
+        <div class="stroke-order-side-controls">
+          <button class="stroke-side-btn" data-action="replay" title="Replay" aria-label="Replay">${replayIconSvg}</button>
+          <button class="stroke-side-btn speed-btn${speed === 'normal' ? ' selected' : ''}" data-speed="normal" title="Fast" aria-label="Fast">${fastIconSvg}</button>
+          <button class="stroke-side-btn speed-btn${speed === 'slow' ? ' selected' : ''}" data-speed="slow" title="Slow" aria-label="Slow">${slowIconSvg}</button>
+        </div>
       </div>
     `;
     const svg = container.querySelector('svg');
     animate(svg);
 
-    container.querySelector('.stroke-replay-btn').addEventListener('click', () => animate(svg));
+    container.querySelector('[data-action="replay"]').addEventListener('click', () => animate(svg));
     container.querySelectorAll('.speed-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         setSpeed(btn.dataset.speed);

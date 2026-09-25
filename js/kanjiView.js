@@ -12,8 +12,24 @@ window.KanjiView = (() => {
   let showAll = false;
   let filterText = '';
   let visibleCount = PAGE_SIZE;
+  // Full sorted char list behind whatever's currently rendered, so the detail
+  // panel's Prev/Next can move beyond just the paginated/visible slice.
+  let sortedChars = [];
 
-  const matchesFilter = (entry) => !filterText || entry.char === filterText;
+  // Matches by exact character, or as a case-insensitive substring against
+  // the on'yomi/kun'yomi readings (furigana) or English meaning.
+  const matchesFilter = (entry) => {
+    if (!filterText) return true;
+    if (entry.char === filterText) return true;
+    const readings = dataset.getReadings(entry.char);
+    if (!readings) return false;
+    const needle = filterText.toLowerCase();
+    return (
+      readings.on.some((r) => r.toLowerCase().includes(needle)) ||
+      readings.kun.some((r) => r.toLowerCase().includes(needle)) ||
+      readings.meanings.some((m) => m.toLowerCase().includes(needle))
+    );
+  };
 
   const currentList = () => {
     const ranks = getAllRanks();
@@ -41,6 +57,7 @@ window.KanjiView = (() => {
 
   const renderChips = (list) => {
     const sorted = sortedByJlpt(list);
+    sortedChars = sorted.map((entry) => entry.char);
     const visible = sorted.slice(0, visibleCount);
 
     const groups = [];
@@ -67,7 +84,7 @@ window.KanjiView = (() => {
       .join('');
 
     container.querySelectorAll('.chip').forEach((chip) => {
-      chip.addEventListener('click', () => openDetail(chip.dataset.char));
+      chip.addEventListener('click', () => openDetail(chip.dataset.char, sortedChars));
     });
 
     const moreBtn = container.querySelector('#kanji-more');
@@ -85,7 +102,7 @@ window.KanjiView = (() => {
 
     container.innerHTML = `
       <div class="kanji-toolbar">
-        <input type="text" id="kanji-filter" placeholder="Paste a character to find it…" maxlength="1" />
+        <input type="text" id="kanji-filter" placeholder="Search by character, reading, or meaning…" />
         <label><input type="checkbox" id="kanji-show-all" /> Show all kanji (ignore rank gate)</label>
         <span class="kanji-count"></span>
       </div>

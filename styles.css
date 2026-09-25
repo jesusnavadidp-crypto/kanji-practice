@@ -1,12 +1,12 @@
 :root {
-  --bg: #faf9fd;
+  --bg: #e8edf6;
   --surface: #ffffff;
   --ink: #262433;
   --muted: #7b7788;
-  --border: #e8e4f3;
+  --border: #d6dfee;
   --accent: #6c63ff;
   --accent-soft: #ecebff;
-  --hover: #f3f1fb;
+  --hover: #dde5f2;
 
   --rank-0: #dcdae6; /* Unknown */
   --rank-1: #ffb870; /* Learning */
@@ -17,6 +17,21 @@
   --rank-1-ink: #3a2400;
   --rank-2-ink: #2b2600;
   --rank-3-ink: #0b3d21;
+
+  /* Stronger, more saturated versions of the rank colors above, used for the
+     chip-grid's thick border — a concentrated ring around the lighter fill. */
+  --rank-0-border: #b6b2c7;
+  --rank-1-border: #e8720c;
+  --rank-2-border: #ca9a04;
+  --rank-3-border: #219653;
+
+  /* Lighter tints of the rank colors, used only for the chip-grid's fill —
+     kept separate from --rank-0..3 so the rank selector and other components
+     that use the fuller-strength color are unaffected. */
+  --rank-0-fill: #eeedf3;
+  --rank-1-fill: #ffdcb8;
+  --rank-2-fill: #fef0a3;
+  --rank-3-fill: #bdeccc;
 }
 
 * {
@@ -252,16 +267,16 @@ main {
   justify-content: center;
   font-size: 30px;
   border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--rank-0);
+  border: 3px solid var(--rank-0-border);
+  background: var(--rank-0-fill);
   color: var(--rank-0-ink);
   cursor: pointer;
 }
 
-.chip.rank-0 { background: var(--rank-0); color: var(--rank-0-ink); }
-.chip.rank-1 { background: var(--rank-1); color: var(--rank-1-ink); }
-.chip.rank-2 { background: var(--rank-2); color: var(--rank-2-ink); }
-.chip.rank-3 { background: var(--rank-3); color: var(--rank-3-ink); }
+.chip.rank-0 { border-color: var(--rank-0-border); background: var(--rank-0-fill); color: var(--rank-0-ink); }
+.chip.rank-1 { border-color: var(--rank-1-border); background: var(--rank-1-fill); color: var(--rank-1-ink); }
+.chip.rank-2 { border-color: var(--rank-2-border); background: var(--rank-2-fill); color: var(--rank-2-ink); }
+.chip.rank-3 { border-color: var(--rank-3-border); background: var(--rank-3-fill); color: var(--rank-3-ink); }
 
 .kanji-toolbar {
   display: flex;
@@ -322,6 +337,46 @@ main {
   display: none;
 }
 
+.nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(38, 36, 51, 0.2);
+}
+
+.nav-arrow:hover {
+  background: var(--hover);
+}
+
+.nav-arrow-left {
+  left: 16px;
+}
+
+.nav-arrow-right {
+  right: 16px;
+}
+
+.nav-arrow.hidden {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  /* Swipe is the primary interaction at this width; the panel leaves too
+     little side margin for the arrows not to overlap it. */
+  .nav-arrow {
+    display: none !important;
+  }
+}
+
 .detail-panel {
   width: min(420px, 100%);
   max-height: 85vh;
@@ -359,7 +414,7 @@ main {
 .detail-char {
   font-size: 72px;
   text-align: center;
-  margin-bottom: 4px;
+  margin-bottom: 20px;
 }
 
 .detail-subtitle {
@@ -428,10 +483,11 @@ main {
   color: var(--muted);
 }
 
-.stroke-order-svg {
+.stroke-order-row {
   display: flex;
+  align-items: center;
   justify-content: center;
-  margin-bottom: 10px;
+  gap: 12px;
 }
 
 .stroke-order-svg svg {
@@ -441,46 +497,133 @@ main {
   border-radius: 14px;
 }
 
-.stroke-order-controls {
+.stroke-order-side-controls {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   gap: 8px;
 }
 
-.speed-toggle {
+.stroke-side-btn {
+  width: 36px;
+  height: 36px;
   display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: hidden;
-}
-
-.speed-btn {
-  border: none;
   background: var(--surface);
-  padding: 8px 14px;
-  font-size: 13px;
   color: var(--muted);
   cursor: pointer;
 }
 
-.speed-btn.selected {
-  background: var(--accent);
-  color: #fff;
-}
-
-.stroke-replay-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.stroke-replay-btn .icon {
+.stroke-side-btn .icon {
   width: 18px;
   height: 18px;
+}
+
+.stroke-side-btn.selected {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+#test-finish-btn {
+  font-size: 20px;
+  line-height: 1;
+  padding: 6px 12px;
+}
+
+.test-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 420px;
+  margin: 0 auto 18px;
+}
+
+.test-card {
+  max-width: 420px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px 22px 26px;
+  text-align: center;
+}
+
+.test-char {
+  font-size: 96px;
+  margin-bottom: 18px;
+}
+
+.rank-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--surface);
+  color: var(--ink);
+  margin-bottom: 18px;
+}
+
+.test-back {
+  text-align: left;
+  margin-bottom: 18px;
+}
+
+.test-back .stat-line {
+  text-align: center;
+}
+
+.test-answer-buttons {
+  display: flex;
+  justify-content: center;
+  /* Deliberately wide: these are graded taps after a recall attempt, so a
+     mis-tap between them is worse than most mis-taps in the app. */
+  gap: 56px;
+}
+
+.answer-icon-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1a1a1a;
+}
+
+.answer-icon-btn .icon {
+  width: 28px;
+  height: 28px;
+}
+
+.answer-icon-btn.correct {
+  background: var(--rank-3);
+}
+
+.answer-icon-btn.incorrect {
+  background: #f7a1a1;
+}
+
+.test-empty,
+.test-report {
+  max-width: 420px;
+  margin: 40px auto 0;
+  text-align: center;
+}
+
+.test-report h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.test-report .primary-btn {
+  margin-top: 18px;
 }
 
 .app-footer {
