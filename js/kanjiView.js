@@ -1,8 +1,9 @@
 // Plain script (no ES modules), exposed as window.KanjiView — see state.js for why.
 
 window.KanjiView = (() => {
-  const { getRank, getAllRanks } = window.State;
+  const { getAllRanks } = window.State;
   const { isKanjiUnlocked } = window.Data;
+  const { icons, chipHtml, bindChips } = window.Ui;
   const { openDetail } = window.DetailPanel;
 
   const container = document.getElementById('kanji-view');
@@ -55,8 +56,8 @@ window.KanjiView = (() => {
       (a, b) => jlptSortWeight(a.char) - jlptSortWeight(b.char) || a.char.codePointAt(0) - b.char.codePointAt(0)
     );
 
-  const renderChips = (list) => {
-    const sorted = sortedByJlpt(list);
+  const renderList = () => {
+    const sorted = sortedByJlpt(currentList());
     sortedChars = sorted.map((entry) => entry.char);
     const visible = sorted.slice(0, visibleCount);
 
@@ -74,27 +75,25 @@ window.KanjiView = (() => {
           <div class="stroke-group">
             <h2>${group.label}</h2>
             <div class="chip-grid">
-              ${group.items
-                .map((k) => `<button class="chip rank-${getRank(k.char)}" data-char="${k.char}">${k.char}</button>`)
-                .join('')}
+              ${group.items.map((k) => chipHtml(k.char)).join('')}
             </div>
           </div>
         `
       )
       .join('');
 
-    container.querySelectorAll('.chip').forEach((chip) => {
-      chip.addEventListener('click', () => openDetail(chip.dataset.char, sortedChars));
-    });
+    bindChips(container, (char) => openDetail(char, sortedChars));
 
-    const moreBtn = container.querySelector('#kanji-more');
-    moreBtn.classList.toggle('hidden', visible.length >= sorted.length);
-
+    container.querySelector('#kanji-more').classList.toggle('hidden', visible.length >= sorted.length);
     container.querySelector('.kanji-count').textContent = `${sorted.length} kanji`;
   };
 
-  const renderList = () => {
-    renderChips(currentList());
+  // Any change to what's being listed (search, gate toggle) restarts pagination
+  // from the first page, rather than keeping a "Show more" depth that belonged
+  // to the previous list.
+  const renderFromFirstPage = () => {
+    visibleCount = PAGE_SIZE;
+    renderList();
   };
 
   const renderKanjiView = (loadedDataset) => {
@@ -102,7 +101,12 @@ window.KanjiView = (() => {
 
     container.innerHTML = `
       <div class="kanji-toolbar">
-        <input type="text" id="kanji-filter" placeholder="Search by character, reading, or meaning…" />
+        <div class="search-input-wrap">
+          <input type="text" id="kanji-filter" placeholder="Search by character, reading, or meaning…" />
+          <button id="kanji-filter-clear" class="input-clear-btn hidden" aria-label="Clear search">
+            ${icons.close}
+          </button>
+        </div>
         <label><input type="checkbox" id="kanji-show-all" /> Show all kanji (ignore rank gate)</label>
         <span class="kanji-count"></span>
       </div>
@@ -110,16 +114,37 @@ window.KanjiView = (() => {
       <button id="kanji-more" class="show-more-btn hidden">Show more</button>
     `;
 
-    container.querySelector('#kanji-filter').addEventListener('input', (e) => {
-      filterText = e.target.value.trim();
-      visibleCount = PAGE_SIZE;
-      renderList();
+    const filterInput = container.querySelector('#kanji-filter');
+    const clearBtn = container.querySelector('#kanji-filter-clear');
+
+    // Debounced: re-filtering rebuilds the whole (possibly thousands-of-chips)
+    // #kanji-groups list, and doing that on every keystroke while a mobile
+    // keyboard/IME is up is a heavy repaint right next to the focused input —
+    // which is what was resetting the cursor to the start mid-typing on
+    // mobile. Waiting for a short pause in typing avoids that.
+    let filterDebounceTimer = null;
+    filterInput.addEventListener('input', (e) => {
+      const value = e.target.value;
+      clearBtn.classList.toggle('hidden', value.length === 0);
+      clearTimeout(filterDebounceTimer);
+      filterDebounceTimer = setTimeout(() => {
+        filterText = value.trim();
+        renderFromFirstPage();
+      }, 200);
+    });
+
+    clearBtn.addEventListener('click', () => {
+      clearTimeout(filterDebounceTimer);
+      filterInput.value = '';
+      filterText = '';
+      clearBtn.classList.add('hidden');
+      renderFromFirstPage();
+      filterInput.focus();
     });
 
     container.querySelector('#kanji-show-all').addEventListener('change', (e) => {
       showAll = e.target.checked;
-      visibleCount = PAGE_SIZE;
-      renderList();
+      renderFromFirstPage();
     });
 
     container.querySelector('#kanji-more').addEventListener('click', () => {
@@ -132,9 +157,7 @@ window.KanjiView = (() => {
 
   // Always recomputes, even while this tab isn't the visible one, so the
   // gate/filter is already current the moment the user switches to it.
-  const refreshKanjiRanks = () => {
-    renderList();
-  };
+  const refreshKanjiRanks = () => renderList();
 
   return { renderKanjiView, refreshKanjiRanks };
 })();

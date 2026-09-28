@@ -8,31 +8,47 @@
   --accent-soft: #ecebff;
   --hover: #dde5f2;
 
-  --rank-0: #dcdae6; /* Unknown */
-  --rank-1: #ffb870; /* Learning */
-  --rank-2: #fde047; /* Familiar */
-  --rank-3: #7bd99a; /* Known */
+  /* The bottom tab bar's own (non-safe-area) height — referenced by anything
+     that needs to sit just above it (e.g. the test view's fixed answer bar)
+     rather than overlapping it, since the tab bar stays visible everywhere
+     on mobile as the one constant way back to Radicals/Kanji. */
+  --bottom-tabs-h: 60px;
 
-  --rank-0-ink: #3a3750;
-  --rank-1-ink: #3a2400;
-  --rank-2-ink: #2b2600;
-  --rank-3-ink: #0b3d21;
+  /* Pastel palette, used wherever a state needs to read as an inviting color
+     rather than a UI accent: rank progress (chips, rank-selector) and the
+     test view's correct/incorrect buttons. One set of tones, reused everywhere
+     a given meaning appears, so a new pastel use stays consistent — see
+     "Design guidelines" in README.md. */
+  --pastel-amber-bg: #faeeda;
+  --pastel-amber-ink: #854f0b;
+  --pastel-yellow-bg: #fdf6d8;
+  --pastel-yellow-ink: #8a7a00;
+  --pastel-green-bg: #eaf3de;
+  --pastel-green-ink: #3b6d11;
+  --pastel-red-bg: #fcebeb;
+  --pastel-red-ink: #791f1f;
+  --pastel-blue-line: #378add;
 
-  /* Stronger, more saturated versions of the rank colors above, used for the
-     chip-grid's thick border — a concentrated ring around the lighter fill. */
-  --rank-0-border: #b6b2c7;
-  --rank-1-border: #e8720c;
-  --rank-2-border: #ca9a04;
-  --rank-3-border: #219653;
-
-  /* Lighter tints of the rank colors, used only for the chip-grid's fill —
-     kept separate from --rank-0..3 so the rank selector and other components
-     that use the fuller-strength color are unaffected. */
-  --rank-0-fill: #eeedf3;
-  --rank-1-fill: #ffdcb8;
-  --rank-2-fill: #fef0a3;
-  --rank-3-fill: #bdeccc;
+  /* Rank progress scale (Unknown/Learning/Familiar/Known): one bg/border/ink
+     triple per rank, shared by the chip grid and the rank-selector so both
+     always agree on what each rank looks like. */
+  --rank-0-bg: var(--surface);
+  --rank-0-border: var(--border);
+  --rank-0-ink: var(--muted);
+  --rank-1-bg: var(--pastel-amber-bg);
+  --rank-1-border: var(--pastel-amber-bg);
+  --rank-1-ink: var(--pastel-amber-ink);
+  --rank-2-bg: var(--pastel-yellow-bg);
+  --rank-2-border: var(--pastel-yellow-bg);
+  --rank-2-ink: var(--pastel-yellow-ink);
+  --rank-3-bg: var(--pastel-green-bg);
+  --rank-3-border: var(--pastel-green-bg);
+  --rank-3-ink: var(--pastel-green-ink);
 }
+
+/* Single breakpoint for every mobile-specific layout change (bottom tab bar,
+   full-screen detail sheet, circular initials-only rank pills, fixed test
+   answer bar) — see README.md's Design guidelines. */
 
 * {
   box-sizing: border-box;
@@ -43,6 +59,21 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   color: var(--ink);
   background: var(--bg);
+  position: relative;
+}
+
+/* Static, low-opacity seigaiha (wave) pattern behind all content — a fixed
+   pseudo-element so it never scrolls with the page. See README.md's Design
+   guidelines before swapping the color or raising the opacity. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.06;
+  background-repeat: repeat;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='20'%3E%3Cpath d='M0 20a20 20 0 0 1 40 0' fill='none' stroke='%23378add' stroke-width='1.5'/%3E%3Cpath d='M-20 20a20 20 0 0 1 40 0' fill='none' stroke='%23378add' stroke-width='1.5'/%3E%3Cpath d='M20 20a20 20 0 0 1 40 0' fill='none' stroke='%23378add' stroke-width='1.5'/%3E%3C/svg%3E");
 }
 
 .app-header {
@@ -55,10 +86,26 @@ body {
   flex-wrap: wrap;
 }
 
+.app-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 .app-header h1 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-title-en {
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .tabs {
@@ -81,6 +128,61 @@ body {
   color: #fff;
 }
 
+.bottom-tabs {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  /* Bottom tab bar replaces the top tab row — thumb-reachable, and it no
+     longer has to share a row with the title and menu button. Test isn't
+     here; it's a menu item (see #settings-menu), not a primary destination.
+     It stays visible everywhere EXCEPT while an actual test card is up (see
+     testView.js's setBottomTabsHidden) — that's the one view with its own
+     competing fixed bottom bar, and the one moment the extra card room
+     matters more than an always-present way back. */
+  .tabs {
+    display: none;
+  }
+
+  .bottom-tabs {
+    display: flex;
+    height: var(--bottom-tabs-h);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bottom-tabs.hidden {
+    display: none;
+  }
+
+  .bottom-tabs .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 4px;
+    border-radius: 0;
+    font-size: 11px;
+  }
+
+  .bottom-tabs .tab .icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .bottom-tabs .tab.active {
+    background: none;
+    color: var(--accent);
+  }
+}
+
 .menu-wrapper {
   margin-left: auto;
   position: relative;
@@ -89,6 +191,7 @@ body {
 .icon-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -97,6 +200,52 @@ body {
   cursor: pointer;
   font-size: 13px;
   color: var(--ink);
+}
+
+/* Borderless icon-only button — back/close/finish controls that shouldn't
+   compete visually with the content they sit above. */
+.ghost-icon-btn {
+  border: none;
+  background: none;
+  padding: 8px;
+  color: var(--muted);
+}
+
+.ghost-icon-btn.hidden {
+  visibility: hidden;
+}
+
+/* The rank-selector plus its neighboring exclude-from-test icon (shared by
+   the detail sheet and the test view — see State.rankRowHtml). */
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.rank-row .rank-selector {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* An ordinary ghost-icon-btn that also carries an on/off state — circular
+   like the rank pills next to it, rather than the square icon-btn default. */
+.exclude-toggle-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.exclude-toggle-icon.selected {
+  background: var(--pastel-red-bg);
+  color: var(--pastel-red-ink);
+}
+
+.exclude-toggle-icon.selected:hover {
+  background: var(--pastel-red-bg);
 }
 
 .icon-btn:hover {
@@ -168,11 +317,16 @@ body {
   margin: 4px 0;
 }
 
-.ai-text-form {
+/* The two full-view forms (AI Text, Configurations) share one centered column. */
+.ai-text-form,
+.config-form {
   max-width: 480px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
+}
+
+.ai-text-form {
   gap: 18px;
 }
 
@@ -209,6 +363,33 @@ body {
   font-size: 13px;
 }
 
+.config-form {
+  gap: 14px;
+}
+
+.config-form h3 {
+  margin: 10px 0 0;
+}
+
+.config-form h3:first-child {
+  margin-top: 0;
+}
+
+.rank-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.rank-swatch[data-rank="1"] { background: var(--rank-1-ink); }
+.rank-swatch[data-rank="2"] { background: var(--rank-2-ink); }
+.rank-swatch[data-rank="3"] { background: var(--rank-3-ink); }
+
+#excluded-empty.hidden {
+  display: none;
+}
+
 .toast {
   position: fixed;
   bottom: 28px;
@@ -230,10 +411,50 @@ body {
   transform: translateX(-50%) translateY(0);
 }
 
+.scroll-top-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 15;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(38, 36, 51, 0.2);
+}
+
+.scroll-top-btn:hover {
+  background: var(--hover);
+}
+
+.scroll-top-btn.hidden {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  /* Clears the fixed bottom tab bar. */
+  .scroll-top-btn {
+    bottom: 88px;
+  }
+}
+
 main {
   padding: 20px;
   max-width: 1100px;
   margin: 0 auto;
+}
+
+@media (max-width: 700px) {
+  /* Clears the fixed bottom tab bar so the last row of content isn't hidden behind it. */
+  main {
+    padding-bottom: 76px;
+  }
 }
 
 .view.hidden {
@@ -244,12 +465,20 @@ main {
   margin-bottom: 26px;
 }
 
-.stroke-group h2 {
+/* Every section label in the app (stroke-count groups, JLPT groups, detail
+   sheet sections, Configurations sections) is the same small uppercase
+   caption; only its margin varies by context. */
+.stroke-group h2,
+.detail-section h3,
+.config-form h3 {
   font-size: 13px;
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.stroke-group h2 {
   margin: 0 0 10px;
 }
 
@@ -259,6 +488,7 @@ main {
   gap: 10px;
 }
 
+/* Colors come from the .rank-N modifier below — every chip always carries one. */
 .chip {
   width: 60px;
   height: 60px;
@@ -267,16 +497,24 @@ main {
   justify-content: center;
   font-size: 30px;
   border-radius: 14px;
-  border: 3px solid var(--rank-0-border);
-  background: var(--rank-0-fill);
-  color: var(--rank-0-ink);
+  border: 1px solid transparent;
   cursor: pointer;
 }
 
-.chip.rank-0 { border-color: var(--rank-0-border); background: var(--rank-0-fill); color: var(--rank-0-ink); }
-.chip.rank-1 { border-color: var(--rank-1-border); background: var(--rank-1-fill); color: var(--rank-1-ink); }
-.chip.rank-2 { border-color: var(--rank-2-border); background: var(--rank-2-fill); color: var(--rank-2-ink); }
-.chip.rank-3 { border-color: var(--rank-3-border); background: var(--rank-3-fill); color: var(--rank-3-ink); }
+.chip.rank-0 { border-color: var(--rank-0-border); background: var(--rank-0-bg); color: var(--rank-0-ink); }
+.chip.rank-1 { border-color: var(--rank-1-border); background: var(--rank-1-bg); color: var(--rank-1-ink); }
+.chip.rank-2 { border-color: var(--rank-2-border); background: var(--rank-2-bg); color: var(--rank-2-ink); }
+.chip.rank-3 { border-color: var(--rank-3-border); background: var(--rank-3-bg); color: var(--rank-3-ink); }
+
+.chip-row-scroll {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.chip-row-scroll .chip {
+  flex-shrink: 0;
+}
 
 .kanji-toolbar {
   display: flex;
@@ -286,13 +524,45 @@ main {
   flex-wrap: wrap;
 }
 
+.search-input-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
 .kanji-toolbar input[type="text"] {
-  padding: 10px 12px;
+  padding: 10px 34px 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 14px;
   min-width: 220px;
   background: var(--surface);
+}
+
+.input-clear-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  color: var(--muted);
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+}
+
+.input-clear-btn .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.input-clear-btn:hover {
+  background: var(--hover);
+}
+
+.input-clear-btn.hidden {
+  display: none;
 }
 
 .kanji-toolbar label {
@@ -326,11 +596,19 @@ main {
 .overlay {
   position: fixed;
   inset: 0;
+  z-index: 20;
   background: rgba(38, 36, 51, 0.45);
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 24px;
+}
+
+@media (max-width: 700px) {
+  /* Full-screen sheet on mobile: no dimmed margin around it. */
+  .overlay {
+    padding: 0;
+  }
 }
 
 .overlay.hidden {
@@ -369,11 +647,12 @@ main {
   display: none;
 }
 
-@media (max-width: 600px) {
-  /* Swipe is the primary interaction at this width; the panel leaves too
-     little side margin for the arrows not to overlap it. */
+@media (max-width: 700px) {
+  /* Same breakpoint at which the panel becomes a full-screen sheet: there's
+     no side margin left for the arrows to sit in, and swipe is the primary
+     interaction at this width anyway. */
   .nav-arrow {
-    display: none !important;
+    display: none;
   }
 }
 
@@ -387,75 +666,160 @@ main {
   box-shadow: 0 20px 60px rgba(38, 36, 51, 0.3);
 }
 
+@media (max-width: 700px) {
+  /* Full-screen sheet, not a floating card — the modal was too cramped for
+     the stroke-order diagram and readings at phone widths. */
+  .detail-panel {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+    padding: 12px 16px 20px;
+  }
+}
+
 .detail-panel-top {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
-.ghost-btn {
-  border: none;
-  background: none;
+.detail-position {
+  font-size: 12px;
   color: var(--muted);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 8px 10px;
-  border-radius: 8px;
-}
-
-.ghost-btn:hover {
-  background: var(--hover);
-}
-
-.ghost-btn.hidden {
-  visibility: hidden;
 }
 
 .detail-char {
   font-size: 72px;
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 4px;
 }
 
 .detail-subtitle {
   text-align: center;
   color: var(--muted);
   font-size: 13px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .rank-selector {
   display: flex;
+  justify-content: center;
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .rank-btn {
   flex: 1;
-  padding: 14px 4px;
+  padding: 12px 4px;
   border-radius: 12px;
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  color: #1a1a1a;
 }
 
-.rank-btn[data-rank="0"] { background: var(--rank-0); }
-.rank-btn[data-rank="1"] { background: var(--rank-1); }
-.rank-btn[data-rank="2"] { background: var(--rank-2); }
-.rank-btn[data-rank="3"] { background: var(--rank-3); }
+.rank-btn[data-rank="0"] { background: var(--rank-0-bg); border-color: var(--rank-0-border); color: var(--rank-0-ink); }
+.rank-btn[data-rank="1"] { background: var(--rank-1-bg); border-color: var(--rank-1-border); color: var(--rank-1-ink); }
+.rank-btn[data-rank="2"] { background: var(--rank-2-bg); border-color: var(--rank-2-border); color: var(--rank-2-ink); }
+.rank-btn[data-rank="3"] { background: var(--rank-3-bg); border-color: var(--rank-3-border); color: var(--rank-3-ink); }
 
 .rank-btn.selected {
   border-color: var(--ink);
+  border-width: 2px;
+}
+
+@media (max-width: 700px) {
+  /* Full labels ("Unknown", "Learning"...) don't fit four-across at phone
+     widths — collapse to a circle showing just the initial. The full word
+     stays in the DOM (font-size: 0, not display: none) so screen readers
+     still announce it. */
+  .rank-btn {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .rank-btn-label {
+    font-size: 0;
+  }
+
+  .rank-btn-label::after {
+    content: attr(data-short);
+    font-size: 13px;
+    font-weight: 500;
+  }
+}
+
+.readings-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px 14px;
+}
+
+.readings-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 13px;
+}
+
+.readings-row:not(:first-child) {
+  border-top: 1px solid var(--border);
+}
+
+.readings-row span:first-child {
+  color: var(--muted);
+}
+
+.stroke-order-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.flip-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  margin: 0 auto 14px;
+}
+
+.flip-back-btn:hover {
+  background: var(--hover);
+}
+
+.flip-back-btn .icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.jisho-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: none;
 }
 
 .detail-section h3 {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   margin: 0 0 8px;
 }
 
@@ -527,23 +891,41 @@ main {
   border-color: var(--accent);
 }
 
-#test-finish-btn {
-  font-size: 20px;
-  line-height: 1;
-  padding: 6px 12px;
-}
-
 .test-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   max-width: 420px;
+  margin: 0 auto 8px;
+}
+
+.test-progress {
+  max-width: 420px;
   margin: 0 auto 18px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.test-progress-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+/* Centers the rank row + card vertically in whatever room is left below the
+   topbar/progress bar — without this, a short card left a large empty gap
+   above the fixed answer buttons on any view taller than the card itself. */
+.test-session-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: min(50vh, 420px);
 }
 
 .test-card {
   max-width: 420px;
-  margin: 0 auto;
+  margin: 0 auto 20px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -552,20 +934,25 @@ main {
 }
 
 .test-char {
-  font-size: 96px;
-  margin-bottom: 18px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
-.rank-select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 14px;
-  font-family: inherit;
-  background: var(--surface);
-  color: var(--ink);
-  margin-bottom: 18px;
+.test-char-glyph {
+  font-size: 96px;
+  line-height: 1;
+}
+
+.test-char-hint {
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .test-back {
@@ -585,6 +972,27 @@ main {
   gap: 56px;
 }
 
+@media (max-width: 700px) {
+  /* Pinned to the bottom, thumb-reachable, instead of floating mid-card. The
+     bottom tab bar is hidden for as long as this is showing (see
+     testView.js), so this can claim the full width down to the edge. */
+  .test-answer-buttons {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+    gap: 40px;
+  }
+
+  #test-view {
+    padding-bottom: 90px;
+  }
+}
+
 .answer-icon-btn {
   width: 64px;
   height: 64px;
@@ -594,7 +1002,6 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1a1a1a;
 }
 
 .answer-icon-btn .icon {
@@ -603,11 +1010,13 @@ main {
 }
 
 .answer-icon-btn.correct {
-  background: var(--rank-3);
+  background: var(--pastel-green-bg);
+  color: var(--pastel-green-ink);
 }
 
 .answer-icon-btn.incorrect {
-  background: #f7a1a1;
+  background: var(--pastel-red-bg);
+  color: var(--pastel-red-ink);
 }
 
 .test-empty,

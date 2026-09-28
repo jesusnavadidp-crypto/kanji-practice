@@ -5,7 +5,7 @@
 // Plain script (no ES modules), exposed as window.FileSync — see state.js for why.
 
 window.FileSync = (() => {
-  const { getAllRanks, replaceAllRanks, onChange } = window.State;
+  const { getProgressBundle, replaceProgressBundle, onChange } = window.State;
 
   const PROGRESS_FILE_NAME = 'progress.json';
   const supportsFileSystemAccess = 'showDirectoryPicker' in window;
@@ -22,7 +22,7 @@ window.FileSync = (() => {
     if (!directoryHandle) return;
     const fileHandle = await directoryHandle.getFileHandle(PROGRESS_FILE_NAME, { create: true });
     const writable = await fileHandle.createWritable();
-    await writable.write(JSON.stringify(getAllRanks(), null, 2));
+    await writable.write(JSON.stringify(getProgressBundle(), null, 2));
     await writable.close();
   };
 
@@ -53,7 +53,7 @@ window.FileSync = (() => {
       const text = await file.text();
       const parsed = text.trim() ? JSON.parse(text) : {};
       if (Object.keys(parsed).length > 0) {
-        replaceAllRanks(parsed);
+        replaceProgressBundle(parsed);
         setStatus('Loaded from folder');
       } else {
         await writeProgressFile();
@@ -65,7 +65,7 @@ window.FileSync = (() => {
   };
 
   const exportProgress = () => {
-    const blob = new Blob([JSON.stringify(getAllRanks(), null, 2)], {
+    const blob = new Blob([JSON.stringify(getProgressBundle(), null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
@@ -78,7 +78,7 @@ window.FileSync = (() => {
 
   const importProgress = async (file) => {
     const text = await file.text();
-    replaceAllRanks(JSON.parse(text));
+    replaceProgressBundle(JSON.parse(text));
     setStatus('Imported');
   };
 
