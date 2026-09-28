@@ -9,6 +9,7 @@ window.Data = (() => {
     const kanji = window.KANJI_DATA;
 
     const radicalChars = new Set(radicals.map((r) => r.char));
+    const kanjiChars = new Set(kanji.map((k) => k.char));
     // A radical that's also a standalone kanji (e.g. 水, 木, 人) appears in both
     // arrays; merge so its detail view keeps the radical facts (stroke count,
     // kanjiUsing) it'd otherwise lose to whichever array was inserted last.
@@ -20,6 +21,9 @@ window.Data = (() => {
       radicals,
       kanji,
       isRadicalChar: (char) => radicalChars.has(char),
+      // Whether `char` is ever drawn by the Test view — i.e. it's in
+      // dataset.kanji, regardless of whether it's *also* a radical.
+      isKanjiChar: (char) => kanjiChars.has(char),
       getEntry: (char) => byChar.get(char),
       // 5 (N5, easiest) .. 1 (N1, hardest), or undefined if untagged.
       getJlptLevel: (char) => window.JLPT_DATA[char],
@@ -42,5 +46,5 @@ window.Data = (() => {
     );
   };
 
-  return { loadDataset, requiredRankFor, isKanjiUnlocked };
+  return { loadDataset, isKanjiUnlocked };
 })();

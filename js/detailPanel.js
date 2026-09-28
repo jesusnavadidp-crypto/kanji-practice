@@ -1,10 +1,13 @@
 // The "chunk container" detail panel, shared by radicals and kanji: shows
-// sub-components (drill-down), a link to Jisho for stroke order, and the rank
-// selector. Both entry types render through the same renderDetail() function.
+// sub-components (drill-down), a link to Jisho for stroke order, the rank
+// selector, and (for actual kanji only — see dataset.isKanjiChar) the
+// exclude-from-test toggle. Both entry types render through the same
+// renderDetail() function.
 // Plain script (no ES modules), exposed as window.DetailPanel — see state.js for why.
 
 window.DetailPanel = (() => {
-  const { RANK_LABELS, getRank, setRank } = window.State;
+  const { getRank, setRank, isExcludedFromTest, setExcludedFromTest } = window.State;
+  const { chipHtml, bindChips, rankRowHtml, bindRankRow, onHorizontalSwipe } = window.Ui;
 
   const SWIPE_THRESHOLD_PX = 40;
 
@@ -22,6 +25,7 @@ window.DetailPanel = (() => {
   const closeBtn = document.getElementById('detail-close');
   const prevBtn = document.getElementById('detail-prev');
   const nextBtn = document.getElementById('detail-next');
+  const positionEl = document.getElementById('detail-position');
   const panel = document.querySelector('.detail-panel');
 
   // The "#kanji" filter routes to Jisho's kanji-detail page (stroke order, readings,
@@ -33,7 +37,6 @@ window.DetailPanel = (() => {
     const entry = dataset.getEntry(char);
     if (!entry) return;
 
-    const rank = getRank(char);
     const jlptLevel = dataset.getJlptLevel(char);
     const readings = dataset.getReadings(char);
     const subtitle = [
@@ -43,55 +46,41 @@ window.DetailPanel = (() => {
       .filter(Boolean)
       .join(' · ');
 
+    const readingRows = [
+      readings?.meanings.length ? ['Concept', readings.meanings.join(', ')] : null,
+      readings?.kun.length ? ["Kun'yomi", readings.kun.join('、 ')] : null,
+      readings?.on.length ? ["On'yomi", readings.on.join('、 ')] : null,
+    ].filter(Boolean);
+
+    const excluded = isExcludedFromTest(char);
+
     content.innerHTML = `
-      <div class="rank-selector">
-        ${RANK_LABELS.map(
-          (label, i) => `<button class="rank-btn${i === rank ? ' selected' : ''}" data-rank="${i}">${label}</button>`
-        ).join('')}
-      </div>
-
       <div class="detail-char">${char}</div>
+      <p class="detail-subtitle">${subtitle}</p>
 
-      ${
-        readings && readings.meanings.length
-          ? `<div class="detail-section">
-              <h3>Concept</h3>
-              <p class="stat-line">${readings.meanings.join(', ')}</p>
-            </div>`
-          : ''
-      }
-
-      ${
-        readings && readings.kun.length
-          ? `<div class="detail-section">
-              <h3>Kun'yomi</h3>
-              <p class="stat-line">${readings.kun.join('、 ')}</p>
-            </div>`
-          : ''
-      }
-
-      ${
-        readings && readings.on.length
-          ? `<div class="detail-section">
-              <h3>On'yomi</h3>
-              <p class="stat-line">${readings.on.join('、 ')}</p>
-            </div>`
-          : ''
-      }
+      ${rankRowHtml(getRank(char), excluded, dataset.isKanjiChar(char))}
 
       <div class="detail-section">
-        <div id="stroke-order-container"></div>
+        <div class="stroke-order-card" id="stroke-order-container"></div>
       </div>
 
+      ${
+        readingRows.length
+          ? `<div class="detail-section">
+              <div class="readings-card">
+                ${readingRows
+                  .map(([label, value]) => `<div class="readings-row"><span>${label}</span><span>${value}</span></div>`)
+                  .join('')}
+              </div>
+            </div>`
+          : ''
+      }
+
       <div class="detail-section">
-        <p class="detail-subtitle">${subtitle}</p>
-        <a class="primary-btn" href="${jishoUrl(char)}" target="_blank" rel="noopener">Open on Jisho ↗</a>
         <h3>Sub-components</h3>
         ${
           entry.components.length > 0
-            ? `<div class="chip-grid">${entry.components
-                .map((c) => `<button class="chip rank-${getRank(c)}" data-char="${c}">${c}</button>`)
-                .join('')}</div>`
+            ? `<div class="chip-grid chip-row-scroll">${entry.components.map((c) => chipHtml(c)).join('')}</div>`
             : '<p class="stat-line">No further decomposition in this dataset.</p>'
         }
         ${
@@ -100,23 +89,27 @@ window.DetailPanel = (() => {
             : ''
         }
       </div>
+
+      <a class="jisho-link" href="${jishoUrl(char)}" target="_blank" rel="noopener">Open on Jisho ↗</a>
     `;
 
     window.StrokeOrder.renderInto(content.querySelector('#stroke-order-container'), char);
 
-    content.querySelectorAll('.rank-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        setRank(char, Number(btn.dataset.rank));
+    bindRankRow(content, {
+      onSelectRank: (newRank) => {
+        setRank(char, newRank);
         render();
-      });
+      },
+      onToggleExclude: () => {
+        setExcludedFromTest(char, !isExcludedFromTest(char));
+        render();
+      },
     });
 
-    content.querySelectorAll('.chip').forEach((chip) => {
-      chip.addEventListener('click', () => {
-        stack.push(chip.dataset.char);
-        render();
-        backBtn.classList.remove('hidden');
-      });
+    bindChips(content, (char) => {
+      stack.push(char);
+      render();
+      backBtn.classList.remove('hidden');
     });
 
     backBtn.classList.toggle('hidden', stack.length <= 1);
@@ -126,6 +119,7 @@ window.DetailPanel = (() => {
     const navIndex = stack.length === 1 ? navList.indexOf(char) : -1;
     prevBtn.classList.toggle('hidden', navIndex <= 0);
     nextBtn.classList.toggle('hidden', navIndex === -1 || navIndex >= navList.length - 1);
+    positionEl.textContent = navIndex === -1 ? '' : `${navIndex + 1} of ${navList.length}`;
   };
 
   const goToOffset = (delta) => {
@@ -136,23 +130,6 @@ window.DetailPanel = (() => {
     if (newIdx < 0 || newIdx >= navList.length) return;
     stack = [navList[newIdx]];
     render();
-  };
-
-  const initSwipeNavigation = () => {
-    let startX = 0;
-    let startY = 0;
-
-    panel.addEventListener('touchstart', (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    });
-
-    panel.addEventListener('touchend', (e) => {
-      const deltaX = e.changedTouches[0].clientX - startX;
-      const deltaY = e.changedTouches[0].clientY - startY;
-      if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX || Math.abs(deltaX) < Math.abs(deltaY) * 1.5) return;
-      goToOffset(deltaX < 0 ? 1 : -1);
-    });
   };
 
   const initDetailPanel = (loadedDataset) => {
@@ -171,7 +148,7 @@ window.DetailPanel = (() => {
 
     prevBtn.addEventListener('click', () => goToOffset(-1));
     nextBtn.addEventListener('click', () => goToOffset(1));
-    initSwipeNavigation();
+    onHorizontalSwipe(panel, SWIPE_THRESHOLD_PX, goToOffset);
 
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) closeBtn.click();
