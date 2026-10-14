@@ -1,7 +1,7 @@
 // Plain script (no ES modules), exposed as window.KanjiView — see state.js for why.
 
 window.KanjiView = (() => {
-  const { getAllRanks } = window.State;
+  const { isStudying } = window.State;
   const { isKanjiUnlocked } = window.Data;
   const { icons, chipHtml, bindChips } = window.Ui;
   const { openDetail } = window.DetailPanel;
@@ -33,9 +33,8 @@ window.KanjiView = (() => {
   };
 
   const currentList = () => {
-    const ranks = getAllRanks();
     return dataset.kanji.filter(
-      (entry) => (showAll || isKanjiUnlocked(dataset, ranks, entry)) && matchesFilter(entry)
+      (entry) => (showAll || isKanjiUnlocked(dataset, isStudying, entry)) && matchesFilter(entry)
     );
   };
 
@@ -51,9 +50,16 @@ window.KanjiView = (() => {
     return level ? `JLPT N${level}` : 'Not JLPT-tagged';
   };
 
+  // Within a JLPT group, by RTK (Heisig 6th ed.) number ascending; kanji
+  // without one go after, by code point.
+  const rtkSortWeight = (char) => dataset.getRtkNumber(char) ?? Infinity;
+
   const sortedByJlpt = (list) =>
     [...list].sort(
-      (a, b) => jlptSortWeight(a.char) - jlptSortWeight(b.char) || a.char.codePointAt(0) - b.char.codePointAt(0)
+      (a, b) =>
+        jlptSortWeight(a.char) - jlptSortWeight(b.char) ||
+        rtkSortWeight(a.char) - rtkSortWeight(b.char) ||
+        a.char.codePointAt(0) - b.char.codePointAt(0)
     );
 
   const renderList = () => {
@@ -107,7 +113,7 @@ window.KanjiView = (() => {
             ${icons.close}
           </button>
         </div>
-        <label><input type="checkbox" id="kanji-show-all" /> Show all kanji (ignore rank gate)</label>
+        <label><input type="checkbox" id="kanji-show-all" /> Show all kanji (ignore studying gate)</label>
         <span class="kanji-count"></span>
       </div>
       <div id="kanji-groups"></div>
@@ -157,7 +163,7 @@ window.KanjiView = (() => {
 
   // Always recomputes, even while this tab isn't the visible one, so the
   // gate/filter is already current the moment the user switches to it.
-  const refreshKanjiRanks = () => renderList();
+  const refreshKanjiList = () => renderList();
 
-  return { renderKanjiView, refreshKanjiRanks };
+  return { renderKanjiView, refreshKanjiList };
 })();

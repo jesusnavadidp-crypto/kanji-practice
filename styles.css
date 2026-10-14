@@ -14,40 +14,39 @@
      on mobile as the one constant way back to Radicals/Kanji. */
   --bottom-tabs-h: 60px;
 
-  /* Pastel palette, used wherever a state needs to read as an inviting color
-     rather than a UI accent: rank progress (chips, rank-selector) and the
-     test view's correct/incorrect buttons. One set of tones, reused everywhere
-     a given meaning appears, so a new pastel use stays consistent — see
-     "Design guidelines" in README.md. */
-  --pastel-amber-bg: #faeeda;
-  --pastel-amber-ink: #854f0b;
-  --pastel-yellow-bg: #fdf6d8;
-  --pastel-yellow-ink: #8a7a00;
+  /* Pastel tones, used wherever an action (not a state) needs to read as an
+     inviting color: the test view's correct/incorrect answer buttons. One set
+     of tones, reused everywhere a given meaning appears — see "Design
+     guidelines" in README.md. */
   --pastel-green-bg: #eaf3de;
   --pastel-green-ink: #3b6d11;
   --pastel-red-bg: #fcebeb;
   --pastel-red-ink: #791f1f;
   --pastel-blue-line: #378add;
 
-  /* Rank progress scale (Unknown/Learning/Familiar/Known): one bg/border/ink
-     triple per rank, shared by the chip grid and the rank-selector so both
-     always agree on what each rank looks like. */
-  --rank-0-bg: var(--surface);
-  --rank-0-border: var(--border);
-  --rank-0-ink: var(--muted);
-  --rank-1-bg: var(--pastel-amber-bg);
-  --rank-1-border: var(--pastel-amber-bg);
-  --rank-1-ink: var(--pastel-amber-ink);
-  --rank-2-bg: var(--pastel-yellow-bg);
-  --rank-2-border: var(--pastel-yellow-bg);
-  --rank-2-ink: var(--pastel-yellow-ink);
-  --rank-3-bg: var(--pastel-green-bg);
-  --rank-3-border: var(--pastel-green-bg);
-  --rank-3-ink: var(--pastel-green-ink);
+  /* SRS band scale — the one source of "state" color. A single blue hue,
+     light (just started) to deep (mature), so learning never reads as an
+     error. Band 0 = not studying (neutral surface + border, not a tint);
+     1 = new (levels 0-1), 2 = mid (2-3), 3 = mature (4+, also any studying
+     radical). One bg/border/ink triple per band, shared by the chips, the
+     study switch, the track bars and the Configurations swatches. Band 1
+     leans on its thicker border to read as more marked than a white chip. */
+  --band-0-bg: var(--surface);
+  --band-0-border: var(--border);
+  --band-0-ink: var(--muted);
+  --band-1-bg: #eef5fd;
+  --band-1-border: #9cc3ef;
+  --band-1-ink: #2c5a8c;
+  --band-2-bg: #d9e9fb;
+  --band-2-border: #5d9be0;
+  --band-2-ink: #1f4f86;
+  --band-3-bg: #bcd8f7;
+  --band-3-border: #2f78cf;
+  --band-3-ink: #123f72;
 }
 
 /* Single breakpoint for every mobile-specific layout change (bottom tab bar,
-   full-screen detail sheet, circular initials-only rank pills, fixed test
+   full-screen detail sheet, fixed test
    answer bar) — see README.md's Design guidelines. */
 
 * {
@@ -144,6 +143,33 @@ body::before {
     display: none;
   }
 
+  /* Keep the header on ONE row at phone width: wrapping pushed the counters
+     and menu button onto a second row. Drop the English subtitle, tighten the
+     gap/padding, and let the title shrink (h1 ellipsizes) so the actions never
+     get pushed down. */
+  .app-header {
+    flex-wrap: nowrap;
+    gap: 12px;
+    padding: 14px 12px;
+  }
+
+  .app-title {
+    flex: 1 1 auto;
+  }
+
+  .app-title-en {
+    display: none;
+  }
+
+  .header-actions {
+    flex-shrink: 0;
+  }
+
+  /* Higher specificity: .counter-badge is declared after this block. */
+  .header-actions .counter-badge {
+    padding: 0 8px;
+  }
+
   .bottom-tabs {
     display: flex;
     height: var(--bottom-tabs-h);
@@ -183,9 +209,68 @@ body::before {
   }
 }
 
-.menu-wrapper {
+.header-actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.menu-wrapper {
   position: relative;
+}
+
+/* Compact header counters: icon + number, no labels (the mobile header only
+   has room for the title and the menu button). */
+.counter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.counter-badge .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.counter-badge.muted {
+  color: var(--muted);
+}
+
+button.counter-badge {
+  cursor: pointer;
+}
+
+button.counter-badge.due {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Pending-reviews dot at the menu button's top-right. */
+#settings-menu-btn {
+  position: relative;
+}
+
+#settings-menu-btn.has-due::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1.5px solid var(--surface);
 }
 
 .icon-btn {
@@ -213,39 +298,6 @@ body::before {
 
 .ghost-icon-btn.hidden {
   visibility: hidden;
-}
-
-/* The rank-selector plus its neighboring exclude-from-test icon (shared by
-   the detail sheet and the test view — see State.rankRowHtml). */
-.rank-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.rank-row .rank-selector {
-  flex: 1;
-  margin-bottom: 0;
-}
-
-/* An ordinary ghost-icon-btn that also carries an on/off state — circular
-   like the rank pills next to it, rather than the square icon-btn default. */
-.exclude-toggle-icon {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.exclude-toggle-icon.selected {
-  background: var(--pastel-red-bg);
-  color: var(--pastel-red-ink);
-}
-
-.exclude-toggle-icon.selected:hover {
-  background: var(--pastel-red-bg);
 }
 
 .icon-btn:hover {
@@ -375,19 +427,97 @@ body::before {
   margin-top: 0;
 }
 
-.rank-swatch {
+.band-swatch {
   width: 14px;
   height: 14px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.rank-swatch[data-rank="1"] { background: var(--rank-1-ink); }
-.rank-swatch[data-rank="2"] { background: var(--rank-2-ink); }
-.rank-swatch[data-rank="3"] { background: var(--rank-3-ink); }
+.band-swatch[data-band="new"] { background: var(--band-1-border); }
+.band-swatch[data-band="mid"] { background: var(--band-2-border); }
+.band-swatch[data-band="mature"] { background: var(--band-3-border); }
 
-#excluded-empty.hidden {
+/* SRS ladder editor: one row per step, "Step N" + days input + remove. */
+.steps-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.step-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.step-label {
+  width: 56px;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.step-row .input-with-suffix {
+  flex: 1;
+}
+
+.step-input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--surface);
+}
+
+.step-input.invalid,
+.rtk-number.invalid {
+  border-color: var(--pastel-red-ink);
+  background: var(--pastel-red-bg);
+}
+
+.step-remove:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.steps-message {
+  margin: 0;
+  font-size: 13px;
+}
+
+.steps-message:empty {
   display: none;
+}
+
+.steps-message.error {
+  color: var(--pastel-red-ink);
+}
+
+.steps-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.steps-actions .primary-btn {
+  width: auto;
+  margin-bottom: 0;
+  padding: 10px 18px;
+}
+
+.steps-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.convert-result {
+  font-size: 13px;
+  margin: 0;
+}
+
+.convert-result.error {
+  color: var(--pastel-red-ink);
 }
 
 .toast {
@@ -488,7 +618,7 @@ main {
   gap: 10px;
 }
 
-/* Colors come from the .rank-N modifier below — every chip always carries one. */
+/* Colors come from the .band-N modifier below — every chip always carries one. */
 .chip {
   width: 60px;
   height: 60px;
@@ -501,10 +631,18 @@ main {
   cursor: pointer;
 }
 
-.chip.rank-0 { border-color: var(--rank-0-border); background: var(--rank-0-bg); color: var(--rank-0-ink); }
-.chip.rank-1 { border-color: var(--rank-1-border); background: var(--rank-1-bg); color: var(--rank-1-ink); }
-.chip.rank-2 { border-color: var(--rank-2-border); background: var(--rank-2-bg); color: var(--rank-2-ink); }
-.chip.rank-3 { border-color: var(--rank-3-border); background: var(--rank-3-bg); color: var(--rank-3-ink); }
+.chip.band-0 { border-color: var(--band-0-border); background: var(--band-0-bg); color: var(--band-0-ink); }
+.chip.band-1 { border-color: var(--band-1-border); background: var(--band-1-bg); color: var(--band-1-ink); }
+.chip.band-2 { border-color: var(--band-2-border); background: var(--band-2-bg); color: var(--band-2-ink); }
+.chip.band-3 { border-color: var(--band-3-border); background: var(--band-3-bg); color: var(--band-3-ink); }
+
+/* Studied chips get a thicker border so even the palest band reads as more
+   marked than a white, unstudied chip on the blue-gray page background. */
+.chip.band-1,
+.chip.band-2,
+.chip.band-3 {
+  border-width: 2px;
+}
 
 .chip-row-scroll {
   flex-wrap: nowrap;
@@ -678,11 +816,23 @@ main {
   }
 }
 
+/* Left group (studying switch, back button) | position | close — the grid's
+   equal outer columns keep the position centered whatever the left holds. */
 .detail-panel-top {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.detail-panel-top-left {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.detail-panel-top #detail-close {
+  justify-self: end;
 }
 
 .detail-position {
@@ -703,55 +853,171 @@ main {
   margin-bottom: 18px;
 }
 
-.rank-selector {
+/* The "Studying" switch: label on the left, track + thumb on the right (the
+   compact variant in the detail sheet's top bar is the bare track + thumb). On uses the deeper blue bands; the
+   thumb carries the state glyph (stop when off, pencil when on). */
+.study-switch {
   display: flex;
-  justify-content: center;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
   margin-bottom: 20px;
-}
-
-.rank-btn {
-  flex: 1;
-  padding: 12px 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  border: 1px solid transparent;
-  font-size: 13px;
+  font: inherit;
+  font-size: 14px;
   font-weight: 500;
+  color: var(--ink);
   cursor: pointer;
 }
 
-.rank-btn[data-rank="0"] { background: var(--rank-0-bg); border-color: var(--rank-0-border); color: var(--rank-0-ink); }
-.rank-btn[data-rank="1"] { background: var(--rank-1-bg); border-color: var(--rank-1-border); color: var(--rank-1-ink); }
-.rank-btn[data-rank="2"] { background: var(--rank-2-bg); border-color: var(--rank-2-border); color: var(--rank-2-ink); }
-.rank-btn[data-rank="3"] { background: var(--rank-3-bg); border-color: var(--rank-3-border); color: var(--rank-3-ink); }
-
-.rank-btn.selected {
-  border-color: var(--ink);
-  border-width: 2px;
+.study-switch.compact {
+  width: auto;
+  padding: 4px 0;
+  margin-bottom: 0;
+  background: none;
+  border: none;
 }
 
-@media (max-width: 700px) {
-  /* Full labels ("Unknown", "Learning"...) don't fit four-across at phone
-     widths — collapse to a circle showing just the initial. The full word
-     stays in the DOM (font-size: 0, not display: none) so screen readers
-     still announce it. */
-  .rank-btn {
-    flex: 0 0 auto;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    border-radius: 50%;
-  }
+.study-switch-track {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--band-0-border);
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
 
-  .rank-btn-label {
-    font-size: 0;
-  }
+.study-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--band-0-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
 
-  .rank-btn-label::after {
-    content: attr(data-short);
-    font-size: 13px;
-    font-weight: 500;
-  }
+.study-switch-thumb .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.study-switch.on .study-switch-track {
+  background: var(--band-3-border);
+}
+
+.study-switch.on .study-switch-thumb {
+  transform: translateX(24px);
+  color: var(--band-3-ink);
+}
+
+/* One compact line per SRS track: label, 6-segment bar, due text. */
+.srs-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.srs-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.srs-track-label {
+  width: 18px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.srs-bar {
+  display: flex;
+  gap: 3px;
+}
+
+.srs-seg {
+  width: 22px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--band-0-border);
+}
+
+.srs-bar.band-1 .srs-seg.filled { background: var(--band-1-border); }
+.srs-bar.band-2 .srs-seg.filled { background: var(--band-2-border); }
+.srs-bar.band-3 .srs-seg.filled { background: var(--band-3-border); }
+
+.srs-due {
+  color: var(--muted);
+  min-width: 52px;
+}
+
+/* One-line description note on a kanji, with a live word counter. */
+.description-field input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  background: var(--surface);
+}
+
+.description-field.invalid input {
+  border-color: var(--pastel-red-ink);
+  background: var(--pastel-red-bg);
+}
+
+/* RTK keyword + number override, one compact row under the description. */
+.rtk-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -14px;
+}
+
+.rtk-row input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  background: var(--surface);
+}
+
+.rtk-keyword {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.rtk-number {
+  flex: 0 0 84px;
+  width: 84px;
+}
+
+.description-counter {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+}
+
+.description-field.invalid .description-counter {
+  color: var(--pastel-red-ink);
 }
 
 .readings-card {
@@ -782,30 +1048,6 @@ main {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px;
-}
-
-.flip-back-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  cursor: pointer;
-  margin: 0 auto 14px;
-}
-
-.flip-back-btn:hover {
-  background: var(--hover);
-}
-
-.flip-back-btn .icon {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
 }
 
 .jisho-link {
@@ -847,60 +1089,39 @@ main {
   color: var(--muted);
 }
 
-.stroke-order-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
+.stroke-order-replay {
+  display: block;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
+  border-radius: 14px;
+  cursor: pointer;
 }
 
-.stroke-order-svg svg {
+.stroke-order-replay:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.stroke-order-replay svg {
   width: 180px;
   height: 180px;
   background: var(--accent-soft);
   border-radius: 14px;
 }
 
-.stroke-order-side-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.stroke-side-btn {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.stroke-side-btn .icon {
-  width: 18px;
-  height: 18px;
-}
-
-.stroke-side-btn.selected {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-
-.test-topbar {
+.session-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: 420px;
+  max-width: 460px;
   margin: 0 auto 8px;
 }
 
-.test-progress {
-  max-width: 420px;
+.session-progress {
+  max-width: 460px;
   margin: 0 auto 18px;
   height: 4px;
   border-radius: 2px;
@@ -908,24 +1129,30 @@ main {
   overflow: hidden;
 }
 
-.test-progress-fill {
+.session-progress-fill {
   height: 100%;
   background: var(--accent);
 }
 
-/* Centers the rank row + card vertically in whatever room is left below the
-   topbar/progress bar — without this, a short card left a large empty gap
-   above the fixed answer buttons on any view taller than the card itself. */
-.test-session-body {
+/* Centers the card vertically in whatever room is
+   left below the topbar/progress bar — without this, a short card left a
+   large empty gap above the fixed answer buttons on any view taller than the
+   card itself. */
+.session-body {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  max-width: 460px;
+  margin: 0 auto;
   min-height: min(50vh, 420px);
 }
 
-.test-card {
-  max-width: 420px;
+/* The shared review card (js/flashcard.js). The front stays put; once
+   revealed, the back is added below it. */
+.fc-card {
+  position: relative;
   margin: 0 auto 20px;
+  width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -933,38 +1160,136 @@ main {
   text-align: center;
 }
 
-.test-char {
-  width: 100%;
-  border: none;
-  background: none;
-  padding: 0;
-  cursor: pointer;
+/* RTK frame number, tucked in the card's top-right corner. */
+.fc-rtk {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.fc-front {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
 }
 
-.test-char-glyph {
+button.fc-reveal {
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.fc-glyph {
   font-size: 96px;
   line-height: 1;
 }
 
-.test-char-hint {
+.fc-reveal-hint {
   font-size: 13px;
   color: var(--muted);
 }
 
-.test-back {
-  text-align: left;
-  margin-bottom: 18px;
+/* Writing direction: the prompt is the meanings, readings smaller below. */
+.fc-prompt-meaning {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.3;
 }
 
-.test-back .stat-line {
-  text-align: center;
+.fc-prompt-keyword {
+  font-size: 32px;
 }
 
-.test-answer-buttons {
+/* Meaning direction back: the RTK keyword as a small line above the meanings. */
+.fc-keyword {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.fc-prompt-readings .stat-line {
+  margin: 0;
+}
+
+.fc-reveal-btn,
+.fc-hint-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.fc-reveal-btn:hover,
+.fc-hint-btn:hover {
+  background: var(--hover);
+}
+
+.fc-hint-btn {
+  border-color: transparent;
+}
+
+.fc-hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.fc-hint.hidden {
+  display: none;
+}
+
+.fc-back {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.fc-back .stat-line {
+  margin: 4px 0;
+}
+
+/* Font glyph beside the stroke-order canvas; stacked on narrow screens. */
+.fc-glyph-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.fc-glyph-row .fc-glyph {
+  font-size: 72px;
+}
+
+/* Meaning direction: the meanings are the answer, so they lead the back. */
+.fc-answer-meaning {
+  margin: 0 0 8px;
+  font-size: 24px;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.fc-description {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+@media (max-width: 700px) {
+  .fc-glyph-row {
+    flex-direction: column;
+  }
+}
+
+.answer-bar {
   display: flex;
   justify-content: center;
   /* Deliberately wide: these are graded taps after a recall attempt, so a
@@ -975,8 +1300,9 @@ main {
 @media (max-width: 700px) {
   /* Pinned to the bottom, thumb-reachable, instead of floating mid-card. The
      bottom tab bar is hidden for as long as this is showing (see
-     testView.js), so this can claim the full width down to the edge. */
-  .test-answer-buttons {
+     setBottomTabsHidden in flashcard.js), so this can claim the full width
+     down to the edge. */
+  .answer-bar {
     position: fixed;
     left: 0;
     right: 0;
@@ -988,7 +1314,8 @@ main {
     gap: 40px;
   }
 
-  #test-view {
+  #test-view,
+  #srs-view {
     padding-bottom: 90px;
   }
 }
@@ -1019,19 +1346,19 @@ main {
   color: var(--pastel-red-ink);
 }
 
-.test-empty,
-.test-report {
+.session-empty,
+.session-report {
   max-width: 420px;
   margin: 40px auto 0;
   text-align: center;
 }
 
-.test-report h2 {
+.session-report h2 {
   font-size: 18px;
   margin-bottom: 12px;
 }
 
-.test-report .primary-btn {
+.session-report .primary-btn {
   margin-top: 18px;
 }
 

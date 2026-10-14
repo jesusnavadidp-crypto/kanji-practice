@@ -1,5 +1,5 @@
-// Builds an AI writing-practice prompt from the kanji you've ranked Learning+
-// (rank >= 1), so an LLM writes back using vocabulary you actually know.
+// Builds an AI writing-practice prompt from the kanji you're studying, so an LLM
+// writes back using vocabulary you actually know.
 // Plain script (no ES modules), exposed as window.AiText — see state.js for why.
 
 window.AiText = (() => {
@@ -7,8 +7,7 @@ window.AiText = (() => {
   let dataset = null;
 
   const knownKanji = () => {
-    const ranks = window.State.getAllRanks();
-    return dataset.kanji.filter((k) => (ranks[k.char] || 0) >= 1).map((k) => k.char);
+    return dataset.kanji.filter((k) => window.State.isStudying(k.char)).map((k) => k.char);
   };
 
   const buildPrompt = ({ topic, length, chapters }) => {
@@ -54,7 +53,7 @@ window.AiText = (() => {
 
   const refreshKnownCount = () => {
     const el = container.querySelector('#ai-known-count');
-    if (el) el.textContent = `Using ${knownKanji().length} kanji you've ranked Learning or higher.`;
+    if (el) el.textContent = `Using ${knownKanji().length} kanji you're studying.`;
   };
 
   const renderAiTextView = (loadedDataset) => {

@@ -1,78 +1,213 @@
-// "Configurations" (☰ menu): lets you tune the Practice Test draw mix and
-// review/undo which kanji you've excluded from it. Both are persisted
-// alongside ranks — see State.getTestWeights/setTestWeight and
-// State.getExcludedFromTest/setExcludedFromTest.
+// "Configurations" (☰ menu): lets you edit the SRS step ladder, tune the
+// Practice Test draw mix by SRS band and convert a progress file saved by the
+// old rank-based version. Weights and steps are persisted alongside progress —
+// see State.getPracticeWeights/setPracticeWeight and State.getSrsSteps/
+// setSrsSteps. The ladder editor works on a local draft; nothing is persisted
+// until Save.
 // Plain script (no ES modules), exposed as window.ConfigView — see state.js for why.
 
 window.ConfigView = (() => {
-  const { RANK_LABELS, getTestWeights, setTestWeight, getExcludedFromTest, setExcludedFromTest } = window.State;
-  const { chipHtml, bindChips } = window.Ui;
+  const {
+    getPracticeWeights,
+    setPracticeWeight,
+    getSrsSteps,
+    setSrsSteps,
+    convertLegacyBundle,
+    replaceProgressBundle,
+    onChange,
+  } = window.State;
+  const { DEFAULT_STEPS, MIN_STEPS, MAX_STEPS, MIN_STEP_DAYS, MAX_STEP_DAYS, isValidSteps } = window.Srs;
+  const { icons } = window.Ui;
 
   const container = document.getElementById('config-view');
-  // The 3 ranks the Test view actually draws from — Unknown has nothing to test yet.
-  const WEIGHTED_RANKS = [1, 2, 3];
+  const BANDS = [
+    ['new', 'New'],
+    ['mid', 'Mid'],
+    ['mature', 'Mature'],
+  ];
 
-  const renderExcludedList = () => {
-    const grid = container.querySelector('#excluded-chip-grid');
-    const emptyMsg = container.querySelector('#excluded-empty');
-    const excluded = getExcludedFromTest();
+  // Local draft of the ladder: entries are numbers, or null for an empty /
+  // non-numeric input. `savedSteps` is what was last persisted, to tell whether
+  // the draft has unsaved edits.
+  let draft = getSrsSteps();
+  let savedSteps = getSrsSteps();
 
-    emptyMsg.classList.toggle('hidden', excluded.length > 0);
-    grid.innerHTML = excluded
-      .map((char) => chipHtml(char, { title: 'Tap to include in Practice Test again' }))
+  const isDirty = () => draft.length !== savedSteps.length || draft.some((v, i) => v !== savedSteps[i]);
+
+  // Inline reason the draft can't be saved, or '' when it can.
+  const draftProblem = () => {
+    if (draft.length < MIN_STEPS || draft.length > MAX_STEPS) return `Use ${MIN_STEPS}-${MAX_STEPS} steps.`;
+    if (!draft.every((v) => Number.isInteger(v) && v >= MIN_STEP_DAYS && v <= MAX_STEP_DAYS)) {
+      return `Each step must be a whole number of days, ${MIN_STEP_DAYS}-${MAX_STEP_DAYS}.`;
+    }
+    if (!isValidSteps(draft)) return 'Each step must be longer than the one before it.';
+    return '';
+  };
+
+  const stepRowsHtml = () =>
+    draft
+      .map(
+        (value, i) => `
+          <div class="step-row">
+            <span class="step-label">Step ${i + 1}</span>
+            <div class="input-with-suffix">
+              <input type="number" class="step-input" data-index="${i}" min="${MIN_STEP_DAYS}" max="${MAX_STEP_DAYS}" step="1" value="${value ?? ''}" aria-label="Step ${i + 1} in days" />
+              <span class="input-suffix">days</span>
+            </div>
+            <button type="button" class="icon-btn ghost-icon-btn step-remove" data-index="${i}" title="Remove step ${i + 1}" aria-label="Remove step ${i + 1}"${draft.length <= MIN_STEPS ? ' disabled' : ''}>${icons.close}</button>
+          </div>`
+      )
       .join('');
 
-    bindChips(grid, (char) => {
-      setExcludedFromTest(char, false);
-      renderExcludedList();
+  // Validation message + button states; cheap enough to run on every keystroke
+  // without touching the inputs (so typing never loses focus).
+  const refreshStepsStatus = () => {
+    const problem = draftProblem();
+    const message = container.querySelector('#steps-message');
+    message.textContent = problem;
+    message.classList.toggle('error', problem !== '');
+    container.querySelectorAll('.step-input').forEach((input, i) => {
+      const value = draft[i];
+      const valid = Number.isInteger(value) && value >= MIN_STEP_DAYS && value <= MAX_STEP_DAYS;
+      input.classList.toggle('invalid', !valid);
     });
+    container.querySelector('#steps-save').disabled = problem !== '' || !isDirty();
+    container.querySelector('#steps-add').disabled = draft.length >= MAX_STEPS;
+    container.querySelector('#steps-reset').disabled =
+      draft.length === DEFAULT_STEPS.length && draft.every((v, i) => v === DEFAULT_STEPS[i]);
+  };
+
+  // Rebuilds only the rows (add / remove / reset / external change).
+  const renderStepRows = () => {
+    container.querySelector('#steps-rows').innerHTML = stepRowsHtml();
+    container.querySelectorAll('.step-input').forEach((input) => {
+      input.addEventListener('input', () => {
+        const value = input.value.trim() === '' ? null : Number(input.value);
+        draft[Number(input.dataset.index)] = Number.isFinite(value) ? value : null;
+        refreshStepsStatus();
+      });
+    });
+    container.querySelectorAll('.step-remove').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (draft.length <= MIN_STEPS) return;
+        draft.splice(Number(btn.dataset.index), 1);
+        renderStepRows();
+      });
+    });
+    refreshStepsStatus();
+  };
+
+  const addStep = () => {
+    if (draft.length >= MAX_STEPS) return;
+    const last = draft[draft.length - 1];
+    draft.push(Number.isInteger(last) ? Math.min(last * 2, MAX_STEP_DAYS) : MIN_STEP_DAYS);
+    renderStepRows();
+  };
+
+  const saveSteps = () => {
+    if (draftProblem() !== '' || !setSrsSteps(draft)) return;
+    savedSteps = getSrsSteps();
+    draft = [...savedSteps];
+    renderStepRows();
+  };
+
+  const showConvertResult = (text, isError = false) => {
+    const el = container.querySelector('#convert-result');
+    el.textContent = text;
+    el.classList.toggle('error', isError);
+  };
+
+  // Converts a legacy file in place and loads it; a file that is already in
+  // the current format is loaded as-is.
+  const convertFile = async (file) => {
+    try {
+      const { bundle, legacy, summary } = convertLegacyBundle(JSON.parse(await file.text()));
+      replaceProgressBundle(bundle);
+      showConvertResult(
+        legacy
+          ? `Converted ${summary.kanji} kanji and ${summary.radicals} radicals.`
+          : 'Already in the current format — loaded as-is.'
+      );
+    } catch {
+      showConvertResult("Couldn't read that file.", true);
+    }
   };
 
   const renderConfigView = () => {
-    const weights = getTestWeights();
+    const weights = getPracticeWeights();
 
     container.innerHTML = `
       <div class="config-form">
+        <h3>SRS steps</h3>
+        <p class="stat-line">Days until the next review after each correct answer.</p>
+        <div class="steps-editor" id="steps-rows"></div>
+        <p class="stat-line">Changes apply from the next review; current schedules stay as they are.</p>
+        <p class="steps-message" id="steps-message" role="status"></p>
+        <div class="steps-actions">
+          <button type="button" class="icon-btn" id="steps-add">Add step</button>
+          <button type="button" class="icon-btn" id="steps-reset">Reset to default (${DEFAULT_STEPS.join('·')})</button>
+          <button type="button" class="primary-btn" id="steps-save">Save</button>
+        </div>
+
         <h3>Practice Test draw mix</h3>
         <p class="stat-line">
-          Relative weights for how often each rank comes up — they don't need to add up to 100.
+          Relative weights for how often each SRS band comes up — they don't need to add up to 100.
         </p>
-        ${WEIGHTED_RANKS.map(
-          (rank) => `
+        ${BANDS.map(
+          ([band, label]) => `
             <label class="form-field">
-              <span>${RANK_LABELS[rank]}</span>
+              <span>${label}</span>
               <div class="input-with-suffix">
-                <span class="rank-swatch" data-rank="${rank}" aria-hidden="true"></span>
-                <input type="number" class="weight-input" data-rank="${rank}" min="0" step="1" value="${weights[rank] ?? 0}" />
+                <span class="band-swatch" data-band="${band}" aria-hidden="true"></span>
+                <input type="number" class="weight-input" data-band="${band}" min="0" step="1" value="${weights[band] ?? 0}" />
                 <span class="input-suffix">%</span>
               </div>
             </label>
           `
         ).join('')}
 
-        <h3>Excluded from Practice Test</h3>
-        <p class="stat-line" id="excluded-empty">
-          Nothing excluded yet — toggle "Exclude from Practice Test" from a kanji's detail sheet, or from the test card itself, for ones you already know by heart.
-        </p>
-        <div class="chip-grid" id="excluded-chip-grid"></div>
+        <h3>Convert old progress file</h3>
+        <p class="stat-line">Load a progress file from the rank-based version and convert it.</p>
+        <label class="form-field">
+          <input type="file" id="convert-input" accept="application/json" />
+        </label>
+        <p class="convert-result" id="convert-result" role="status"></p>
       </div>
     `;
+
+    renderStepRows();
+    container.querySelector('#steps-add').addEventListener('click', addStep);
+    container.querySelector('#steps-reset').addEventListener('click', () => {
+      draft = [...DEFAULT_STEPS];
+      renderStepRows();
+    });
+    container.querySelector('#steps-save').addEventListener('click', saveSteps);
 
     container.querySelectorAll('.weight-input').forEach((input) => {
       input.addEventListener('input', () => {
         const value = Number(input.value);
-        setTestWeight(Number(input.dataset.rank), Number.isFinite(value) ? value : 0);
+        setPracticeWeight(input.dataset.band, Number.isFinite(value) ? value : 0);
       });
     });
 
-    renderExcludedList();
+    container.querySelector('#convert-input').addEventListener('change', (e) => {
+      const [file] = e.target.files;
+      if (file) convertFile(file);
+      e.target.value = '';
+    });
   };
 
-  // Called on every rank change while this view is open, e.g. a chip un-excluded
-  // elsewhere while Configurations happens to be the visible view.
-  const refreshExcludedIfOpen = () => {
-    if (!container.classList.contains('hidden')) renderExcludedList();
-  };
+  // An import / folder load can replace the ladder underneath the editor; follow
+  // it unless there are unsaved edits (those win until saved or reset).
+  onChange(() => {
+    const current = getSrsSteps();
+    if (current.length === savedSteps.length && current.every((v, i) => v === savedSteps[i])) return;
+    const wasDirty = isDirty();
+    savedSteps = current;
+    if (!container.querySelector('#steps-rows')) return;
+    if (!wasDirty) draft = [...savedSteps];
+    renderStepRows();
+  });
 
-  return { renderConfigView, refreshExcludedIfOpen };
+  return { renderConfigView };
 })();

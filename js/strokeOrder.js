@@ -3,17 +3,10 @@
 // the start. Plain script, exposed as window.StrokeOrder.
 
 window.StrokeOrder = (() => {
-  const { icons } = window.Ui;
-
-  const SPEED_MS = { normal: 400, slow: 900 };
-  const SPEED_KEY = 'kanji-radicals:strokeSpeed';
+  const STROKE_MS = 900;
   const VIEW_SIZE = 109; // KanjiVG's fixed canvas size
 
-  const getSpeed = () => (localStorage.getItem(SPEED_KEY) === 'slow' ? 'slow' : 'normal');
-  const setSpeed = (speed) => localStorage.setItem(SPEED_KEY, speed);
-
   const animate = (svg) => {
-    const durationMs = SPEED_MS[getSpeed()];
     const paths = [...svg.querySelectorAll('path')];
     paths.forEach((path, i) => {
       const length = path.getTotalLength();
@@ -22,8 +15,8 @@ window.StrokeOrder = (() => {
       path.style.strokeDashoffset = `${length}`;
       // Force the initial (undrawn) state to paint before enabling the transition.
       path.getBoundingClientRect();
-      path.style.transition = `stroke-dashoffset ${durationMs}ms ease-in-out`;
-      path.style.transitionDelay = `${i * durationMs}ms`;
+      path.style.transition = `stroke-dashoffset ${STROKE_MS}ms ease-in-out`;
+      path.style.transitionDelay = `${i * STROKE_MS}ms`;
       path.style.strokeDashoffset = '0';
     });
   };
@@ -42,29 +35,19 @@ window.StrokeOrder = (() => {
       .map((d) => `<path d="${d}" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`)
       .join('');
 
-    const speed = getSpeed();
+    // The diagram itself is the replay control; the click must not reach a
+    // parent handler (e.g. the flashcard).
     container.innerHTML = `
-      <div class="stroke-order-row">
-        <div class="stroke-order-svg">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEW_SIZE} ${VIEW_SIZE}">${pathTags}</svg>
-        </div>
-        <div class="stroke-order-side-controls">
-          <button class="stroke-side-btn" data-action="replay" title="Replay" aria-label="Replay">${icons.replay}</button>
-          <button class="stroke-side-btn speed-btn${speed === 'normal' ? ' selected' : ''}" data-speed="normal" title="Fast" aria-label="Fast">${icons.fast}</button>
-          <button class="stroke-side-btn speed-btn${speed === 'slow' ? ' selected' : ''}" data-speed="slow" title="Slow" aria-label="Slow">${icons.slow}</button>
-        </div>
-      </div>
+      <button type="button" class="stroke-order-replay" aria-label="Replay stroke order" title="Tap to replay">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEW_SIZE} ${VIEW_SIZE}">${pathTags}</svg>
+      </button>
     `;
     const svg = container.querySelector('svg');
     animate(svg);
 
-    container.querySelector('[data-action="replay"]').addEventListener('click', () => animate(svg));
-    container.querySelectorAll('.speed-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        setSpeed(btn.dataset.speed);
-        container.querySelectorAll('.speed-btn').forEach((b) => b.classList.toggle('selected', b === btn));
-        animate(svg);
-      });
+    container.querySelector('.stroke-order-replay').addEventListener('click', (e) => {
+      e.stopPropagation();
+      animate(svg);
     });
   };
 

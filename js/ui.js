@@ -1,11 +1,17 @@
-// Shared view-layer building blocks: the inline icon set, the rank chip, the
-// rank row (rank selector + exclude toggle) and horizontal-swipe wiring.
-// Everything here is markup/DOM only — it reads State for a character's rank
+// Shared view-layer building blocks: the inline icon set, the band-colored
+// chip, the studying switch, the SRS track lines and horizontal-swipe wiring.
+// Everything here is markup/DOM only — it reads State for a character's band
 // but owns no state of its own, which is what keeps state.js a plain store.
 // Plain script (no ES modules), exposed as window.Ui — see state.js for why.
 
 window.Ui = (() => {
-  const { RANK_LABELS, getRank } = window.State;
+  const { getChipBand, getSrsSteps } = window.State;
+  const { bandForLevel, clampLevel, daysBetween } = window.Srs;
+
+  // Everything rendered via innerHTML that came from the user (descriptions)
+  // must go through here first.
+  const escapeHtml = (text) =>
+    String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
   // Every inline icon in the app shares one wrapper; only the path body and
   // the stroke weight differ. Heavier strokes (2.4) are for the oversized
@@ -23,24 +29,20 @@ window.Ui = (() => {
     undo: svgIcon(
       '<path d="M9 14 4 9l5-5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 9h10a5 5 0 0 1 0 10h-1" stroke-linecap="round" stroke-linejoin="round"/>'
     ),
-    // The exclude-from-test toggle. A single diagonal path, corner-to-corner
-    // across the viewBox — unlike the common two-path "pencil + underline"
-    // glyph, this one is symmetric around its own center, so it sits visually
-    // centered in a circular button instead of reading bottom-right-heavy.
+    // The "studying" glyph on the switch thumb (the off glyph is `stop`).
     pencil: svgIcon('<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 3 21l.5-4.5L17 3Z" stroke-linecap="round" stroke-linejoin="round"/>'),
-    replay: svgIcon(
-      '<path d="M4 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 15a8 8 0 1 0 2-8.5L4 10" stroke-linecap="round" stroke-linejoin="round"/>'
+    // "Not studying": a circle struck through by a diagonal slash.
+    stop: svgIcon('<circle cx="12" cy="12" r="8.5"/><path d="M6 18 18 6" stroke-linecap="round"/>'),
+    // Two circular arrows: the SRS Review menu item.
+    repeat: svgIcon(
+      '<path d="M17 2l3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 11V9a4 4 0 0 1 4-4h12" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 22l-3-3 3-3" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 13v2a4 4 0 0 1-4 4H4" stroke-linecap="round" stroke-linejoin="round"/>'
     ),
-    fast: svgIcon(
-      '<path d="M4 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>'
-    ),
-    slow: svgIcon('<path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>'),
   };
 
   // The character tile used by every grid in the app (radicals, kanji,
-  // sub-components, the excluded list) — always colored by its current rank.
+  // sub-components) — always colored by its current band (0 = not studying).
   const chipHtml = (char, { title = '' } = {}) =>
-    `<button class="chip rank-${getRank(char)}" data-char="${char}"${title ? ` title="${title}"` : ''}>${char}</button>`;
+    `<button class="chip band-${getChipBand(char)}" data-char="${char}"${title ? ` title="${title}"` : ''}>${char}</button>`;
 
   const bindChips = (root, onSelect) => {
     root.querySelectorAll('.chip').forEach((chip) => {
@@ -48,51 +50,66 @@ window.Ui = (() => {
     });
   };
 
-  // Repaints just the rank colors of already-rendered chips, e.g. after a rank
-  // change, without rebuilding the DOM.
-  const refreshChipRanks = (root) => {
+  // Repaints just the band colors of already-rendered chips, e.g. after a
+  // studying/SRS change, without rebuilding the DOM.
+  const refreshChipBands = (root) => {
     root.querySelectorAll('.chip').forEach((chip) => {
-      chip.className = `chip rank-${getRank(chip.dataset.char)}`;
+      chip.className = `chip band-${getChipBand(chip.dataset.char)}`;
     });
   };
 
-  // The 4-pill rank row. Every rank stays colored by its own state;
-  // `.selected` just adds emphasis to the current one. The label's first
-  // letter doubles as a narrow-screen initial via CSS (see .rank-btn-label in
-  // styles.css) while the full word stays in the DOM for screen readers.
-  const rankSelectorHtml = (rank) =>
-    `<div class="rank-selector">
-      ${RANK_LABELS.map(
-        (label, i) =>
-          `<button class="rank-btn${i === rank ? ' selected' : ''}" data-rank="${i}">
-            <span class="rank-btn-label" data-short="${label[0]}">${label}</span>
-          </button>`
-      ).join('')}
-    </div>`;
+  // The "Studying" switch. The thumb carries the state glyph: stop when off,
+  // pencil when on. `compact` drops the visible label (the detail sheet's top
+  // bar shows the bare switch), so it keeps its name via aria-label + title.
+  const studyToggleHtml = (on, { compact = false } = {}) =>
+    `<button type="button" class="study-switch${on ? ' on' : ''}${compact ? ' compact' : ''}" role="switch" aria-checked="${on}"${
+      compact ? ` aria-label="Studying" title="${on ? 'Studying — tap to stop' : 'Not studying — tap to start'}"` : ''
+    }>
+      ${compact ? '' : '<span class="study-switch-label">Studying</span>'}
+      <span class="study-switch-track">
+        <span class="study-switch-thumb">${on ? icons.pencil : icons.stop}</span>
+      </span>
+    </button>`;
 
-  // The rank selector plus, for actual kanji, a compact exclude-from-test icon
-  // beside it — one row, shared by the detail sheet and the test view so
-  // "learning status" and "don't quiz me on this" always sit together.
-  const rankRowHtml = (rank, excluded, showExcludeToggle = true) =>
-    `<div class="rank-row">
-      ${rankSelectorHtml(rank)}
-      ${
-        showExcludeToggle
-          ? `<button class="icon-btn ghost-icon-btn exclude-toggle-icon${excluded ? ' selected' : ''}" aria-pressed="${excluded}" aria-label="${excluded ? 'Include in Practice Test again' : 'Exclude from Practice Test'}" title="${excluded ? 'Excluded from Practice Test' : 'Exclude from Practice Test'}">
-              ${icons.pencil}
-            </button>`
-          : ''
-      }
-    </div>`;
+  // Calls `onToggle(newValue)` when the switch rendered by studyToggleHtml()
+  // inside `root` is clicked.
+  const bindStudyToggle = (root, onToggle) => {
+    const toggle = root.querySelector('.study-switch');
+    toggle.addEventListener('click', () => onToggle(toggle.getAttribute('aria-checked') !== 'true'));
+  };
 
-  // Binds the rank selector and (when present) the exclude toggle rendered by
-  // rankRowHtml() inside `root`.
-  const bindRankRow = (root, { onSelectRank, onToggleExclude }) => {
-    root.querySelectorAll('.rank-btn').forEach((btn) => {
-      btn.addEventListener('click', () => onSelectRank(Number(btn.dataset.rank)));
-    });
-    const excludeBtn = root.querySelector('.exclude-toggle-icon');
-    if (excludeBtn) excludeBtn.addEventListener('click', onToggleExclude);
+  const TRACK_LABELS = [
+    ['meaning', '意', 'Meaning'],
+    ['writing', '書', 'Writing'],
+  ];
+
+  const dueText = (track, todayStr) => {
+    const days = daysBetween(todayStr, track.due);
+    return days <= 0 ? 'today' : `in ${days}d`;
+  };
+
+  // One compact line per track: label, a bar with one segment per step of the
+  // current ladder whose first `level` segments are filled in the track's band
+  // color (read by length, not counted), and when it is next due. A stored
+  // level above a since-shrunk ladder shows as full. `only` limits it to one track name
+  // (SRS Review shows just the track being graded).
+  const srsTracksHtml = (srs, todayStr, only = null) => {
+    const stepCount = getSrsSteps().length;
+    return `<div class="srs-tracks">
+      ${TRACK_LABELS.filter(([name]) => !only || name === only).map(([name, label, word]) => {
+        const track = srs[name];
+        const level = clampLevel(track.level, stepCount);
+        const segments = Array.from(
+          { length: stepCount },
+          (_, i) => `<span class="srs-seg${i < level ? ' filled' : ''}"></span>`
+        ).join('');
+        return `<div class="srs-track">
+          <span class="srs-track-label" title="${word}" aria-label="${word}">${label}</span>
+          <span class="srs-bar band-${bandForLevel(level, stepCount)}" role="img" aria-label="${word} level ${level} of ${stepCount}">${segments}</span>
+          <span class="srs-due">${dueText(track, todayStr)}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
   };
 
   // Calls `onSwipe(+1)` for a leftward swipe over `el` and `onSwipe(-1)` for a
@@ -115,5 +132,15 @@ window.Ui = (() => {
     });
   };
 
-  return { icons, chipHtml, bindChips, refreshChipRanks, rankRowHtml, bindRankRow, onHorizontalSwipe };
+  return {
+    icons,
+    escapeHtml,
+    chipHtml,
+    bindChips,
+    refreshChipBands,
+    studyToggleHtml,
+    bindStudyToggle,
+    srsTracksHtml,
+    onHorizontalSwipe,
+  };
 })();

@@ -42,10 +42,6 @@ window.FileSync = (() => {
   };
 
   const linkFolder = async () => {
-    if (!supportsFileSystemAccess) {
-      setStatus('Not supported here');
-      return;
-    }
     try {
       directoryHandle = await window.showDirectoryPicker();
       const fileHandle = await directoryHandle.getFileHandle(PROGRESS_FILE_NAME, { create: true });
@@ -83,18 +79,19 @@ window.FileSync = (() => {
   };
 
   const initFileSync = () => {
-    document.getElementById('link-folder-btn').addEventListener('click', linkFolder);
+    const linkFolderBtn = document.getElementById('link-folder-btn');
+    if (supportsFileSystemAccess) {
+      linkFolderBtn.addEventListener('click', linkFolder);
+    } else {
+      // Browsers without the API (Safari, all iOS browsers) only get Export/Import.
+      linkFolderBtn.remove();
+    }
     document.getElementById('export-btn').addEventListener('click', exportProgress);
     document.getElementById('import-input').addEventListener('change', (e) => {
       const [file] = e.target.files;
       if (file) importProgress(file);
       e.target.value = '';
     });
-
-    if (!supportsFileSystemAccess) {
-      document.getElementById('link-folder-btn').title = 'Not supported in this browser — use Export/Import';
-      document.getElementById('link-folder-btn').disabled = true;
-    }
 
     onChange(scheduleWrite);
   };
