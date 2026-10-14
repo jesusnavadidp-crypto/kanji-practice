@@ -28,22 +28,22 @@ window.Data = (() => {
       // 5 (N5, easiest) .. 1 (N1, hardest), or undefined if untagged.
       getJlptLevel: (char) => window.JLPT_DATA[char],
       getReadings: (char) => window.KANJIDIC_DATA[char],
+      // The one RTK number resolver (subtitle, card corner, list ordering): the
+      // user's override when set, else the KANJIDIC2 Heisig 6th-ed. frame
+      // number, or undefined if neither exists.
+      getRtkNumber: (char) => window.State.getRtkOverride(char) ?? window.KANJIDIC_DATA[char]?.rtk,
+      // The KANJIDIC2 number alone — what an empty override falls back to.
+      getDefaultRtkNumber: (char) => window.KANJIDIC_DATA[char]?.rtk,
     };
   };
 
-  // A component that is a plain radical needs rank >= 1 (Learning) to count as
-  // known-enough; a component that is itself a full kanji needs rank >= 2 (Familiar).
-  const requiredRankFor = (dataset, componentChar) =>
-    dataset.isRadicalChar(componentChar) ? 1 : 2;
-
-  const isKanjiUnlocked = (dataset, ranks, kanjiEntry) => {
-    // Atomic (no sub-components) means this is a radical that's also a
-    // standalone kanji (e.g. 水) — nothing to gate on, so it's ready as soon
-    // as you've started ranking it directly, rather than always hidden.
-    if (kanjiEntry.components.length === 0) return (ranks[kanjiEntry.char] || 0) >= 1;
-    return kanjiEntry.components.every(
-      (c) => (ranks[c] || 0) >= requiredRankFor(dataset, c)
-    );
+  // A kanji is unlocked once every one of its components is being studied.
+  // Atomic (no sub-components) means this is a radical that's also a
+  // standalone kanji (e.g. 水) — nothing to gate on, so it's unlocked as soon
+  // as it is itself studied, rather than always hidden.
+  const isKanjiUnlocked = (dataset, isStudying, kanjiEntry) => {
+    if (kanjiEntry.components.length === 0) return isStudying(kanjiEntry.char);
+    return kanjiEntry.components.every(isStudying);
   };
 
   return { loadDataset, isKanjiUnlocked };

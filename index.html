@@ -15,6 +15,9 @@
       <button class="tab active" data-tab="radicals">Radicals</button>
       <button class="tab" data-tab="kanji">Kanji</button>
     </nav>
+    <div class="header-actions">
+    <span id="activated-badge" class="counter-badge" title="Kanji activated today" aria-label="Kanji activated today"></span>
+    <button id="due-badge" class="counter-badge" type="button"></button>
     <div class="menu-wrapper">
       <button id="settings-menu-btn" class="icon-btn" title="Menu" aria-label="Menu">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -24,13 +27,22 @@
         </svg>
       </button>
       <div id="settings-menu" class="dropdown-menu hidden">
+        <button id="srs-menu-btn" class="menu-item" title="Review the kanji cards that are due today">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M17 2l3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 11V9a4 4 0 0 1 4-4h12" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 22l-3-3 3-3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M20 13v2a4 4 0 0 1-4 4H4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>SRS Review</span>
+        </button>
         <button id="test-menu-btn" class="menu-item" title="Practice with a flashcard-style test">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M4 12.5l5 5L20 6" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           <span>Practice Test</span>
         </button>
-        <button id="config-menu-btn" class="menu-item" title="Tune the Practice Test draw mix and manage excluded kanji">
+        <button id="config-menu-btn" class="menu-item" title="Tune the Practice Test draw mix and convert an old progress file">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-linejoin="round"/>
@@ -61,7 +73,7 @@
         </label>
         <div id="sync-status" class="sync-status"></div>
         <hr class="menu-divider" />
-        <button id="ai-text-menu-btn" class="menu-item" title="Build an AI writing-practice prompt from your known kanji">
+        <button id="ai-text-menu-btn" class="menu-item" title="Build an AI writing-practice prompt from the kanji you're studying">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.5 5.5l2.5 2.5M16 16l2.5 2.5M18.5 5.5 16 8M8 16l-2.5 2.5" stroke-linecap="round"/>
           </svg>
@@ -69,11 +81,13 @@
         </button>
       </div>
     </div>
+    </div>
   </header>
 
   <main id="app">
     <section id="radicals-view" class="view"></section>
     <section id="kanji-view" class="view hidden"></section>
+    <section id="srs-view" class="view hidden"></section>
     <section id="test-view" class="view hidden"></section>
     <section id="ai-text-view" class="view hidden"></section>
     <section id="config-view" class="view hidden"></section>
@@ -109,11 +123,14 @@
     <button id="detail-prev" class="nav-arrow nav-arrow-left hidden" aria-label="Previous kanji">&lsaquo;</button>
     <div class="detail-panel">
       <div class="detail-panel-top">
-        <button id="detail-back" class="icon-btn ghost-icon-btn hidden" aria-label="Back to previous component">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
+        <div class="detail-panel-top-left">
+          <span id="detail-study"></span>
+          <button id="detail-back" class="icon-btn ghost-icon-btn hidden" aria-label="Back to previous component">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
         <span id="detail-position" class="detail-position"></span>
         <button id="detail-close" class="icon-btn ghost-icon-btn" aria-label="Close">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -141,6 +158,7 @@
   <script src="data/jlpt.js"></script>
   <script src="data/kanjidic.js"></script>
   <script src="data/strokes.js"></script>
+  <script src="js/srs.js"></script>
   <script src="js/state.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/data.js"></script>
@@ -149,7 +167,9 @@
   <script src="js/detailPanel.js"></script>
   <script src="js/radicalsView.js"></script>
   <script src="js/kanjiView.js"></script>
+  <script src="js/flashcard.js"></script>
   <script src="js/testView.js"></script>
+  <script src="js/srsView.js"></script>
   <script src="js/aiText.js"></script>
   <script src="js/configView.js"></script>
   <script src="js/app.js"></script>

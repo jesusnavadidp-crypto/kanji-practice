@@ -4,25 +4,27 @@
 
 (() => {
   const { loadDataset } = window.Data;
-  const { onChange } = window.State;
+  const { onChange, getActivatedTodayCount, getDueCards } = window.State;
   const { initFileSync } = window.FileSync;
   const { initDetailPanel, refreshDetailIfOpen } = window.DetailPanel;
-  const { renderRadicalsView, refreshRadicalRanks } = window.RadicalsView;
-  const { renderKanjiView, refreshKanjiRanks } = window.KanjiView;
+  const { renderRadicalsView, refreshRadicals } = window.RadicalsView;
+  const { renderKanjiView, refreshKanjiList } = window.KanjiView;
   const { renderTestView, refreshTestIfEmpty, showTestView } = window.TestView;
+  const { renderSrsView, refreshSrsIfEmpty, showSrsView } = window.SrsView;
   const { renderAiTextView, refreshKnownCount } = window.AiText;
-  const { renderConfigView, refreshExcludedIfOpen } = window.ConfigView;
-  const { onHorizontalSwipe } = window.Ui;
+  const { renderConfigView } = window.ConfigView;
+  const { onHorizontalSwipe, icons } = window.Ui;
 
   const views = {
     radicals: document.getElementById('radicals-view'),
     kanji: document.getElementById('kanji-view'),
+    srs: document.getElementById('srs-view'),
     test: document.getElementById('test-view'),
     aiText: document.getElementById('ai-text-view'),
     config: document.getElementById('config-view'),
   };
 
-  // The two primary tabs, in swipe order — Test and AI Text are menu-triggered
+  // The two primary tabs, in swipe order — SRS Review, Test and AI Text are menu-triggered
   // destinations, not part of this cycle.
   const PRIMARY_TABS = ['radicals', 'kanji'];
 
@@ -33,8 +35,8 @@
       el.classList.toggle('hidden', viewName !== name);
     }
     document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
-    // Always reveal it on navigation — Test's own render (see testView.js)
-    // re-hides it only for as long as an actual card is up.
+    // Always reveal it on navigation — a session view's own render (see
+    // flashcard.js) re-hides it only for as long as an actual card is up.
     document.getElementById('bottom-tabs').classList.remove('hidden');
     updateScrollTopVisibility();
   };
@@ -81,6 +83,31 @@
     });
   };
 
+  // Shared by the ☰ menu's SRS Review item and the header due badge.
+  const openSrsReview = () => {
+    showView('srs');
+    showSrsView();
+  };
+
+  // Header counters + the pending-reviews dot on ☰. Dates come from Srs.today(),
+  // so re-reading State is enough after a day rollover.
+  const refreshCounters = () => {
+    const activated = getActivatedTodayCount();
+    const due = getDueCards().length;
+    const activatedBadge = document.getElementById('activated-badge');
+    activatedBadge.innerHTML = `${icons.pencil}${activated}`;
+    activatedBadge.classList.toggle('muted', activated === 0);
+    activatedBadge.title = `${activated} kanji activated today`;
+    activatedBadge.setAttribute('aria-label', `${activated} kanji activated today`);
+    const dueBadge = document.getElementById('due-badge');
+    dueBadge.innerHTML = `${icons.repeat}${due}`;
+    dueBadge.classList.toggle('muted', due === 0);
+    dueBadge.classList.toggle('due', due > 0);
+    dueBadge.title = `${due} reviews due`;
+    dueBadge.setAttribute('aria-label', `${due} reviews due`);
+    document.getElementById('settings-menu-btn').classList.toggle('has-due', due > 0);
+  };
+
   const initSettingsMenu = () => {
     const btn = document.getElementById('settings-menu-btn');
     const menu = document.getElementById('settings-menu');
@@ -102,6 +129,13 @@
       refreshKnownCount();
     });
 
+    document.getElementById('srs-menu-btn').addEventListener('click', () => {
+      menu.classList.add('hidden');
+      openSrsReview();
+    });
+
+    document.getElementById('due-badge').addEventListener('click', openSrsReview);
+
     document.getElementById('test-menu-btn').addEventListener('click', () => {
       menu.classList.add('hidden');
       showView('test');
@@ -111,7 +145,6 @@
     document.getElementById('config-menu-btn').addEventListener('click', () => {
       menu.classList.add('hidden');
       showView('config');
-      refreshExcludedIfOpen();
     });
   };
 
@@ -127,16 +160,23 @@
     renderRadicalsView(dataset);
     renderKanjiView(dataset);
     renderTestView(dataset);
+    renderSrsView(dataset, () => showView('kanji'));
     renderAiTextView(dataset);
     renderConfigView();
 
+    refreshCounters();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refreshCounters();
+    });
+
     onChange(() => {
-      refreshRadicalRanks();
-      refreshKanjiRanks();
+      refreshCounters();
+      refreshRadicals();
+      refreshKanjiList();
       refreshDetailIfOpen();
       refreshTestIfEmpty();
+      refreshSrsIfEmpty();
       refreshKnownCount();
-      refreshExcludedIfOpen();
     });
   };
 
