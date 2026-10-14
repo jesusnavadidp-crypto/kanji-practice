@@ -1,0 +1,1374 @@
+:root {
+  --bg: #e8edf6;
+  --surface: #ffffff;
+  --ink: #262433;
+  --muted: #7b7788;
+  --border: #d6dfee;
+  --accent: #6c63ff;
+  --accent-soft: #ecebff;
+  --hover: #dde5f2;
+
+  /* The bottom tab bar's own (non-safe-area) height — referenced by anything
+     that needs to sit just above it (e.g. the test view's fixed answer bar)
+     rather than overlapping it, since the tab bar stays visible everywhere
+     on mobile as the one constant way back to Radicals/Kanji. */
+  --bottom-tabs-h: 60px;
+
+  /* Pastel tones, used wherever an action (not a state) needs to read as an
+     inviting color: the test view's correct/incorrect answer buttons. One set
+     of tones, reused everywhere a given meaning appears — see "Design
+     guidelines" in README.md. */
+  --pastel-green-bg: #eaf3de;
+  --pastel-green-ink: #3b6d11;
+  --pastel-red-bg: #fcebeb;
+  --pastel-red-ink: #791f1f;
+  --pastel-blue-line: #378add;
+
+  /* SRS band scale — the one source of "state" color. A single blue hue,
+     light (just started) to deep (mature), so learning never reads as an
+     error. Band 0 = not studying (neutral surface + border, not a tint);
+     1 = new (levels 0-1), 2 = mid (2-3), 3 = mature (4+, also any studying
+     radical). One bg/border/ink triple per band, shared by the chips, the
+     study switch, the track bars and the Configurations swatches. Band 1
+     leans on its thicker border to read as more marked than a white chip. */
+  --band-0-bg: var(--surface);
+  --band-0-border: var(--border);
+  --band-0-ink: var(--muted);
+  --band-1-bg: #eef5fd;
+  --band-1-border: #9cc3ef;
+  --band-1-ink: #2c5a8c;
+  --band-2-bg: #d9e9fb;
+  --band-2-border: #5d9be0;
+  --band-2-ink: #1f4f86;
+  --band-3-bg: #bcd8f7;
+  --band-3-border: #2f78cf;
+  --band-3-ink: #123f72;
+}
+
+/* Single breakpoint for every mobile-specific layout change (bottom tab bar,
+   full-screen detail sheet, fixed test
+   answer bar) — see README.md's Design guidelines. */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  position: relative;
+}
+
+/* Static, low-opacity seigaiha (wave) pattern behind all content — a fixed
+   pseudo-element so it never scrolls with the page. See README.md's Design
+   guidelines before swapping the color or raising the opacity. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.06;
+  background-repeat: repeat;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='20'%3E%3Cpath d='M0 20a20 20 0 0 1 40 0' fill='none' stroke='%23378add' stroke-width='1.5'/%3E%3Cpath d='M-20 20a20 20 0 0 1 40 0' fill='none' stroke='%23378add' stroke-width='1.5'/%3E%3Cpath d='M20 20a20 20 0 0 1 40 0' fill='none' stroke='%23378add' stroke-width='1.5'/%3E%3C/svg%3E");
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.app-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-title-en {
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.tab {
+  border: none;
+  background: none;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.bottom-tabs {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  /* Bottom tab bar replaces the top tab row — thumb-reachable, and it no
+     longer has to share a row with the title and menu button. Test isn't
+     here; it's a menu item (see #settings-menu), not a primary destination.
+     It stays visible everywhere EXCEPT while an actual test card is up (see
+     testView.js's setBottomTabsHidden) — that's the one view with its own
+     competing fixed bottom bar, and the one moment the extra card room
+     matters more than an always-present way back. */
+  .tabs {
+    display: none;
+  }
+
+  /* Keep the header on ONE row at phone width: wrapping pushed the counters
+     and menu button onto a second row. Drop the English subtitle, tighten the
+     gap/padding, and let the title shrink (h1 ellipsizes) so the actions never
+     get pushed down. */
+  .app-header {
+    flex-wrap: nowrap;
+    gap: 12px;
+    padding: 14px 12px;
+  }
+
+  .app-title {
+    flex: 1 1 auto;
+  }
+
+  .app-title-en {
+    display: none;
+  }
+
+  .header-actions {
+    flex-shrink: 0;
+  }
+
+  /* Higher specificity: .counter-badge is declared after this block. */
+  .header-actions .counter-badge {
+    padding: 0 8px;
+  }
+
+  .bottom-tabs {
+    display: flex;
+    height: var(--bottom-tabs-h);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bottom-tabs.hidden {
+    display: none;
+  }
+
+  .bottom-tabs .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 4px;
+    border-radius: 0;
+    font-size: 11px;
+  }
+
+  .bottom-tabs .tab .icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .bottom-tabs .tab.active {
+    background: none;
+    color: var(--accent);
+  }
+}
+
+.header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.menu-wrapper {
+  position: relative;
+}
+
+/* Compact header counters: icon + number, no labels (the mobile header only
+   has room for the title and the menu button). */
+.counter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.counter-badge .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.counter-badge.muted {
+  color: var(--muted);
+}
+
+button.counter-badge {
+  cursor: pointer;
+}
+
+button.counter-badge.due {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Pending-reviews dot at the menu button's top-right. */
+#settings-menu-btn {
+  position: relative;
+}
+
+#settings-menu-btn.has-due::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1.5px solid var(--surface);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+/* Borderless icon-only button — back/close/finish controls that shouldn't
+   compete visually with the content they sit above. */
+.ghost-icon-btn {
+  border: none;
+  background: none;
+  padding: 8px;
+  color: var(--muted);
+}
+
+.ghost-icon-btn.hidden {
+  visibility: hidden;
+}
+
+.icon-btn:hover {
+  background: var(--hover);
+}
+
+.icon-btn .icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(38, 36, 51, 0.14);
+  padding: 8px;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 20;
+}
+
+.dropdown-menu.hidden {
+  display: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: none;
+  background: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.menu-item:hover {
+  background: var(--hover);
+}
+
+.menu-item .icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.sync-status {
+  color: var(--muted);
+  font-size: 12px;
+  padding: 8px 12px 2px;
+  min-height: 16px;
+}
+
+.menu-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 4px 0;
+}
+
+/* The two full-view forms (AI Text, Configurations) share one centered column. */
+.ai-text-form,
+.config-form {
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-text-form {
+  gap: 18px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.form-field textarea,
+.form-field input[type="number"] {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--surface);
+}
+
+.input-with-suffix {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.input-with-suffix input {
+  flex: 1;
+}
+
+.input-suffix {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.config-form {
+  gap: 14px;
+}
+
+.config-form h3 {
+  margin: 10px 0 0;
+}
+
+.config-form h3:first-child {
+  margin-top: 0;
+}
+
+.band-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.band-swatch[data-band="new"] { background: var(--band-1-border); }
+.band-swatch[data-band="mid"] { background: var(--band-2-border); }
+.band-swatch[data-band="mature"] { background: var(--band-3-border); }
+
+/* SRS ladder editor: one row per step, "Step N" + days input + remove. */
+.steps-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.step-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.step-label {
+  width: 56px;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.step-row .input-with-suffix {
+  flex: 1;
+}
+
+.step-input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--surface);
+}
+
+.step-input.invalid,
+.rtk-number.invalid {
+  border-color: var(--pastel-red-ink);
+  background: var(--pastel-red-bg);
+}
+
+.step-remove:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.steps-message {
+  margin: 0;
+  font-size: 13px;
+}
+
+.steps-message:empty {
+  display: none;
+}
+
+.steps-message.error {
+  color: var(--pastel-red-ink);
+}
+
+.steps-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.steps-actions .primary-btn {
+  width: auto;
+  margin-bottom: 0;
+  padding: 10px 18px;
+}
+
+.steps-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.convert-result {
+  font-size: 13px;
+  margin: 0;
+}
+
+.convert-result.error {
+  color: var(--pastel-red-ink);
+}
+
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--ink);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 30;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.scroll-top-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 15;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(38, 36, 51, 0.2);
+}
+
+.scroll-top-btn:hover {
+  background: var(--hover);
+}
+
+.scroll-top-btn.hidden {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  /* Clears the fixed bottom tab bar. */
+  .scroll-top-btn {
+    bottom: 88px;
+  }
+}
+
+main {
+  padding: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+@media (max-width: 700px) {
+  /* Clears the fixed bottom tab bar so the last row of content isn't hidden behind it. */
+  main {
+    padding-bottom: 76px;
+  }
+}
+
+.view.hidden {
+  display: none;
+}
+
+.stroke-group {
+  margin-bottom: 26px;
+}
+
+/* Every section label in the app (stroke-count groups, JLPT groups, detail
+   sheet sections, Configurations sections) is the same small uppercase
+   caption; only its margin varies by context. */
+.stroke-group h2,
+.detail-section h3,
+.config-form h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stroke-group h2 {
+  margin: 0 0 10px;
+}
+
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Colors come from the .band-N modifier below — every chip always carries one. */
+.chip {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.chip.band-0 { border-color: var(--band-0-border); background: var(--band-0-bg); color: var(--band-0-ink); }
+.chip.band-1 { border-color: var(--band-1-border); background: var(--band-1-bg); color: var(--band-1-ink); }
+.chip.band-2 { border-color: var(--band-2-border); background: var(--band-2-bg); color: var(--band-2-ink); }
+.chip.band-3 { border-color: var(--band-3-border); background: var(--band-3-bg); color: var(--band-3-ink); }
+
+/* Studied chips get a thicker border so even the palest band reads as more
+   marked than a white, unstudied chip on the blue-gray page background. */
+.chip.band-1,
+.chip.band-2,
+.chip.band-3 {
+  border-width: 2px;
+}
+
+.chip-row-scroll {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.chip-row-scroll .chip {
+  flex-shrink: 0;
+}
+
+.kanji-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.search-input-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.kanji-toolbar input[type="text"] {
+  padding: 10px 34px 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  min-width: 220px;
+  background: var(--surface);
+}
+
+.input-clear-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  color: var(--muted);
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+}
+
+.input-clear-btn .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.input-clear-btn:hover {
+  background: var(--hover);
+}
+
+.input-clear-btn.hidden {
+  display: none;
+}
+
+.kanji-toolbar label {
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kanji-count {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.show-more-btn {
+  margin-top: 12px;
+  border: none;
+  background: var(--hover);
+  color: var(--ink);
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.show-more-btn.hidden {
+  display: none;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(38, 36, 51, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+
+@media (max-width: 700px) {
+  /* Full-screen sheet on mobile: no dimmed margin around it. */
+  .overlay {
+    padding: 0;
+  }
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(38, 36, 51, 0.2);
+}
+
+.nav-arrow:hover {
+  background: var(--hover);
+}
+
+.nav-arrow-left {
+  left: 16px;
+}
+
+.nav-arrow-right {
+  right: 16px;
+}
+
+.nav-arrow.hidden {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  /* Same breakpoint at which the panel becomes a full-screen sheet: there's
+     no side margin left for the arrows to sit in, and swipe is the primary
+     interaction at this width anyway. */
+  .nav-arrow {
+    display: none;
+  }
+}
+
+.detail-panel {
+  width: min(420px, 100%);
+  max-height: 85vh;
+  background: var(--surface);
+  padding: 18px 22px 26px;
+  overflow-y: auto;
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(38, 36, 51, 0.3);
+}
+
+@media (max-width: 700px) {
+  /* Full-screen sheet, not a floating card — the modal was too cramped for
+     the stroke-order diagram and readings at phone widths. */
+  .detail-panel {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+    padding: 12px 16px 20px;
+  }
+}
+
+/* Left group (studying switch, back button) | position | close — the grid's
+   equal outer columns keep the position centered whatever the left holds. */
+.detail-panel-top {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.detail-panel-top-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-panel-top #detail-close {
+  justify-self: end;
+}
+
+.detail-position {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.detail-char {
+  font-size: 72px;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.detail-subtitle {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+/* The "Studying" switch: label on the left, track + thumb on the right (the
+   compact variant in the detail sheet's top bar is the bare track + thumb). On uses the deeper blue bands; the
+   thumb carries the state glyph (stop when off, pencil when on). */
+.study-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.study-switch.compact {
+  width: auto;
+  padding: 4px 0;
+  margin-bottom: 0;
+  background: none;
+  border: none;
+}
+
+.study-switch-track {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--band-0-border);
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.study-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--band-0-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
+
+.study-switch-thumb .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.study-switch.on .study-switch-track {
+  background: var(--band-3-border);
+}
+
+.study-switch.on .study-switch-thumb {
+  transform: translateX(24px);
+  color: var(--band-3-ink);
+}
+
+/* One compact line per SRS track: label, 6-segment bar, due text. */
+.srs-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.srs-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.srs-track-label {
+  width: 18px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.srs-bar {
+  display: flex;
+  gap: 3px;
+}
+
+.srs-seg {
+  width: 22px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--band-0-border);
+}
+
+.srs-bar.band-1 .srs-seg.filled { background: var(--band-1-border); }
+.srs-bar.band-2 .srs-seg.filled { background: var(--band-2-border); }
+.srs-bar.band-3 .srs-seg.filled { background: var(--band-3-border); }
+
+.srs-due {
+  color: var(--muted);
+  min-width: 52px;
+}
+
+/* One-line description note on a kanji, with a live word counter. */
+.description-field input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  background: var(--surface);
+}
+
+.description-field.invalid input {
+  border-color: var(--pastel-red-ink);
+  background: var(--pastel-red-bg);
+}
+
+/* RTK keyword + number override, one compact row under the description. */
+.rtk-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -14px;
+}
+
+.rtk-row input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  background: var(--surface);
+}
+
+.rtk-keyword {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.rtk-number {
+  flex: 0 0 84px;
+  width: 84px;
+}
+
+.description-counter {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+}
+
+.description-field.invalid .description-counter {
+  color: var(--pastel-red-ink);
+}
+
+.readings-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px 14px;
+}
+
+.readings-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 13px;
+}
+
+.readings-row:not(:first-child) {
+  border-top: 1px solid var(--border);
+}
+
+.readings-row span:first-child {
+  color: var(--muted);
+}
+
+.stroke-order-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.jisho-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.detail-section h3 {
+  margin: 0 0 8px;
+}
+
+.detail-section {
+  margin-bottom: 22px;
+}
+
+.primary-btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  text-align: center;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--accent-soft);
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 22px;
+}
+
+.stat-line {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.stroke-order-replay {
+  display: block;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.stroke-order-replay:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.stroke-order-replay svg {
+  width: 180px;
+  height: 180px;
+  background: var(--accent-soft);
+  border-radius: 14px;
+}
+
+.session-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 460px;
+  margin: 0 auto 8px;
+}
+
+.session-progress {
+  max-width: 460px;
+  margin: 0 auto 18px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.session-progress-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+/* Centers the card vertically in whatever room is
+   left below the topbar/progress bar — without this, a short card left a
+   large empty gap above the fixed answer buttons on any view taller than the
+   card itself. */
+.session-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 460px;
+  margin: 0 auto;
+  min-height: min(50vh, 420px);
+}
+
+/* The shared review card (js/flashcard.js). The front stays put; once
+   revealed, the back is added below it. */
+.fc-card {
+  position: relative;
+  margin: 0 auto 20px;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px 22px 26px;
+  text-align: center;
+}
+
+/* RTK frame number, tucked in the card's top-right corner. */
+.fc-rtk {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.fc-front {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+button.fc-reveal {
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.fc-glyph {
+  font-size: 96px;
+  line-height: 1;
+}
+
+.fc-reveal-hint {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Writing direction: the prompt is the meanings, readings smaller below. */
+.fc-prompt-meaning {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.3;
+}
+
+.fc-prompt-keyword {
+  font-size: 32px;
+}
+
+/* Meaning direction back: the RTK keyword as a small line above the meanings. */
+.fc-keyword {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.fc-prompt-readings .stat-line {
+  margin: 0;
+}
+
+.fc-reveal-btn,
+.fc-hint-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.fc-reveal-btn:hover,
+.fc-hint-btn:hover {
+  background: var(--hover);
+}
+
+.fc-hint-btn {
+  border-color: transparent;
+}
+
+.fc-hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.fc-hint.hidden {
+  display: none;
+}
+
+.fc-back {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.fc-back .stat-line {
+  margin: 4px 0;
+}
+
+/* Font glyph beside the stroke-order canvas; stacked on narrow screens. */
+.fc-glyph-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.fc-glyph-row .fc-glyph {
+  font-size: 72px;
+}
+
+/* Meaning direction: the meanings are the answer, so they lead the back. */
+.fc-answer-meaning {
+  margin: 0 0 8px;
+  font-size: 24px;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.fc-description {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+@media (max-width: 700px) {
+  .fc-glyph-row {
+    flex-direction: column;
+  }
+}
+
+.answer-bar {
+  display: flex;
+  justify-content: center;
+  /* Deliberately wide: these are graded taps after a recall attempt, so a
+     mis-tap between them is worse than most mis-taps in the app. */
+  gap: 56px;
+}
+
+@media (max-width: 700px) {
+  /* Pinned to the bottom, thumb-reachable, instead of floating mid-card. The
+     bottom tab bar is hidden for as long as this is showing (see
+     setBottomTabsHidden in flashcard.js), so this can claim the full width
+     down to the edge. */
+  .answer-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+    gap: 40px;
+  }
+
+  #test-view,
+  #srs-view {
+    padding-bottom: 90px;
+  }
+}
+
+.answer-icon-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.answer-icon-btn .icon {
+  width: 28px;
+  height: 28px;
+}
+
+.answer-icon-btn.correct {
+  background: var(--pastel-green-bg);
+  color: var(--pastel-green-ink);
+}
+
+.answer-icon-btn.incorrect {
+  background: var(--pastel-red-bg);
+  color: var(--pastel-red-ink);
+}
+
+.session-empty,
+.session-report {
+  max-width: 420px;
+  margin: 40px auto 0;
+  text-align: center;
+}
+
+.session-report h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.session-report .primary-btn {
+  margin-top: 18px;
+}
+
+.app-footer {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 20px;
+}
+
+.app-footer a {
+  color: var(--muted);
+}
