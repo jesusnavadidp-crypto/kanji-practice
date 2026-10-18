@@ -31,10 +31,11 @@ window.TestView = (() => {
   let lastDealt = null;
 
   // Studying kanji only, bucketed by band (new / mid / mature).
+  // Iterating kanji excludes component-only entries, but keeps kanji that are also radicals.
   const poolByBand = () => {
     const buckets = { new: [], mid: [], mature: [] };
     for (const k of dataset.kanji) {
-      if (!isStudying(k.char)) continue;
+      if (!dataset.isTestEligible(k.char) || !isStudying(k.char)) continue;
       buckets[BAND_KEYS[getChipBand(k.char)]].push(k.char);
     }
     return buckets;

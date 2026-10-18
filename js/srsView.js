@@ -36,6 +36,7 @@ window.SrsView = (() => {
   // null when nothing is scheduled.
   const daysUntilNextDue = () => {
     const dues = getStudyingChars()
+      .filter((char) => dataset.isTestEligible(char))
       .map(getSrs)
       .filter(Boolean)
       .flatMap((srs) => [srs.meaning.due, srs.writing.due]);

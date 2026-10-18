@@ -256,6 +256,8 @@ window.State = (() => {
     const todayStr = today();
     const cards = [];
     for (const char of getStudyingChars()) {
+      // Ignore component-only characters, even if imported progress has SRS tracks.
+      if (!kanjiChars.has(char) || char === '丨' || char === '｜') continue;
       const srs = chars[char].srs;
       if (!srs) continue;
       for (const track of TRACKS) {

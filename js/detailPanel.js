@@ -144,7 +144,9 @@ window.DetailPanel = (() => {
 
     const readings = dataset.getReadings(char);
 
+    const rtk = dataset.getRtk(char);
     const readingRows = [
+      rtk ? [`RTK 6th · #${rtk.number}`, escapeHtml(rtk.keyword)] : null,
       readings?.meanings.length ? ['Concept', readings.meanings.join(', ')] : null,
       readings?.kun.length ? ["Kun'yomi", readings.kun.join('、 ')] : null,
       readings?.on.length ? ["On'yomi", readings.on.join('、 ')] : null,
@@ -172,7 +174,7 @@ window.DetailPanel = (() => {
               <div class="description-counter" id="description-counter">${countWords(description)}/${DESCRIPTION_MAX_WORDS} words</div>
             </div>
             <div class="detail-section rtk-row">
-              <input type="text" id="keyword-input" class="rtk-keyword" value="${escapeHtml(getKeyword(char))}" maxlength="${KEYWORD_MAX_LENGTH}" placeholder="RTK keyword" aria-label="RTK keyword" />
+              <input type="text" id="keyword-input" class="rtk-keyword" value="${escapeHtml(getKeyword(char))}" maxlength="${KEYWORD_MAX_LENGTH}" placeholder="${escapeHtml(dataset.getRtk(char)?.keyword || 'RTK keyword')}" aria-label="RTK keyword" />
               <input type="number" id="rtk-input" class="rtk-number" min="1" max="9999" step="1" value="${rtkOverride ?? ''}" placeholder="${rtkDefault ?? '#'}" aria-label="RTK number (empty uses the default${rtkDefault ? ` #${rtkDefault}` : ''})" />
             </div>`
           : ''

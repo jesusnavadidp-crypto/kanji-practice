@@ -24,10 +24,15 @@ window.Data = (() => {
       // Whether `char` is ever drawn by the Test view — i.e. it's in
       // dataset.kanji, regardless of whether it's *also* a radical.
       isKanjiChar: (char) => kanjiChars.has(char),
+      // KRADFILE also lists the vertical stroke as a character; it is component-only for tests.
+      isTestEligible: (char) => kanjiChars.has(char) && char !== '丨' && char !== '｜',
       getEntry: (char) => byChar.get(char),
       // 5 (N5, easiest) .. 1 (N1, hardest), or undefined if untagged.
       getJlptLevel: (char) => window.JLPT_DATA[char],
       getReadings: (char) => window.KANJIDIC_DATA[char],
+      getRtk: (char) => window.RTK_DATA?.[char],
+      // Personal keywords override the book default without changing bundled data.
+      getKeyword: (char) => window.State.getKeyword(char) || window.RTK_DATA?.[char]?.keyword || '',
       // The one RTK number resolver (subtitle, card corner, list ordering): the
       // user's override when set, else the KANJIDIC2 Heisig 6th-ed. frame
       // number, or undefined if neither exists.
