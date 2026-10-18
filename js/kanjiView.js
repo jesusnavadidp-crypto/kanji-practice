@@ -18,10 +18,15 @@ window.KanjiView = (() => {
   let sortedChars = [];
 
   // Matches by exact character, or as a case-insensitive substring against
-  // the on'yomi/kun'yomi readings (furigana) or English meaning.
+  // the readings, meanings or keywords; numeric queries match an RTK frame exactly.
   const matchesFilter = (entry) => {
     if (!filterText) return true;
     if (entry.char === filterText) return true;
+    const rtkQuery = /^#?(\d+)$/.exec(filterText);
+    if (rtkQuery) return dataset.getRtkNumber(entry.char) === Number(rtkQuery[1]);
+    const needleKeyword = filterText.toLowerCase();
+    if (dataset.getKeyword(entry.char).toLowerCase().includes(needleKeyword) ||
+        dataset.getRtk(entry.char)?.keyword.toLowerCase().includes(needleKeyword)) return true;
     const readings = dataset.getReadings(entry.char);
     if (!readings) return false;
     const needle = filterText.toLowerCase();
@@ -108,7 +113,7 @@ window.KanjiView = (() => {
     container.innerHTML = `
       <div class="kanji-toolbar">
         <div class="search-input-wrap">
-          <input type="text" id="kanji-filter" placeholder="Search by character, reading, or meaning…" />
+          <input type="text" id="kanji-filter" placeholder="Search by character, reading, meaning, keyword, or RTK #…" />
           <button id="kanji-filter-clear" class="input-clear-btn hidden" aria-label="Clear search">
             ${icons.close}
           </button>

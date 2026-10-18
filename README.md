@@ -164,6 +164,7 @@ on `file://`. Each is shipped as a plain `<script>`-loaded global instead:
 |---|---|---|
 | `data/radicals.js`, `data/kanji.js` | EDRDG KRADFILE/RADKFILE | `scripts/build-data.js` |
 | `data/jlpt.js` | Jonathan Waller's JLPT lists (old Anki sqlite decks) | `scripts/build-jlpt.js` |
+| `data/rtk.js` | RTK 1 sixth-edition keywords and frame numbers; see `data/RTK-SOURCE.md` | Hardcoded; no build required |
 | `data/kanjidic.js` | EDRDG KANJIDIC2 (on'yomi/kun'yomi/meanings, plus the Heisig RTK 6th-edition frame number `rtk`, ~3,000 kanji) | `scripts/build-kanjidic.js` |
 | `data/strokes.js` | KanjiVG's combined dump (stroke path data, ~6,400 of our 12,162 characters) | `scripts/build-strokes.js` |
 
@@ -196,3 +197,13 @@ is simply there, with no fetch/cache logic left at runtime at all.
   — the same source jisho.org itself credits for its JLPT tags.
 - Stroke order diagrams from [KanjiVG](https://kanjivg.tagaini.net/),
   © Ulrich Apel, licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
+
+RTK keywords are bundled for all 2,200 Volume 1 sixth-edition kanji. Details show the original book keyword; Practice Test and SRS Review use your personal keyword when set, otherwise the book keyword. Clearing a personal keyword restores the default. Kanji search matches personal and book keywords. No runtime download is needed.
+
+Kanji search accepts exact RTK frame numbers (`46` or `#46`), using your RTK number override when set. The studying gate still applies unless “Show all kanji” is enabled. Practice Test and SRS Review exclude component-only characters, while retaining radicals that are also kanji.
+
+The vertical-stroke component `丨` (and its `｜` variant) is explicitly excluded from both test modes, even though KRADFILE includes `丨` in its character list. Its studying flag and saved progress are preserved.
+
+The main meaning label in both practice modes uses your personal keyword first, the bundled RTK keyword second, and dictionary meanings as the fallback. Dictionary meanings remain visible as supporting detail when a keyword leads.
+
+Revealed flashcards have an identical layout in both directions: character, preferred meaning label, dictionary meanings, on/kun readings, stroke animation and personal note. Only the unrevealed prompt changes with direction.

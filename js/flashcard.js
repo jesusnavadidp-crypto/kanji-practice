@@ -6,7 +6,7 @@
 // Plain script (no ES modules), exposed as window.Flashcard — see state.js for why.
 
 window.Flashcard = (() => {
-  const { getDescription, getKeyword } = window.State;
+  const { getDescription } = window.State;
   const { icons, escapeHtml } = window.Ui;
 
   const MAX_PROMPT_MEANINGS = 3;
@@ -62,7 +62,7 @@ window.Flashcard = (() => {
       readings.kun.length ? `<p class="stat-line">Kun: ${readings.kun.join('、 ')}</p>` : '',
     ].join('');
 
-  // Writing direction: the user's RTK keyword leads alone when there is one;
+  // Writing direction: the personal keyword, then bundled RTK keyword, leads;
   // otherwise meanings alone are ambiguous, so the readings go below them,
   // smaller. An optional hint (the user's note) opens in place either way.
   const writingPromptHtml = (readings, description, keyword) => {
@@ -95,33 +95,14 @@ window.Flashcard = (() => {
       : `<div class="fc-front">${prompt}<button type="button" class="fc-reveal-btn">Tap to reveal</button></div>`;
   };
 
-  // Revealed back. Meaning direction: the meanings are the answer, so they lead
-  // (large), readings below, then the stroke canvas. Writing direction: the
-  // front already showed the keyword or meanings + readings, so the back is only
-  // the glyph as written beside the stroke canvas, then the user's description.
-  // Meaning direction also shows the keyword (if any) as a small line above.
-  const backHtml = ({ direction }, char, readings, description, keyword) => {
+  // Both directions reveal the same complete answer. Only the hidden prompt differs.
+  const backHtml = (char, readings, description, keyword) => {
     const descriptionHtml = description ? `<p class="fc-description">${escapeHtml(description)}</p>` : '';
-    if (direction === 'writing') {
-      return `
-        <div class="fc-back">
-          <div class="fc-glyph-row">
-            <span class="fc-glyph">${char}</span>
-            <div class="fc-stroke" id="fc-stroke-container"></div>
-          </div>
-          ${descriptionHtml}
-        </div>
-      `;
-    }
     return `
       <div class="fc-back">
-        ${keyword ? `<p class="fc-keyword">${escapeHtml(keyword)}</p>` : ''}
-        ${
-          readings
-            ? `<p class="fc-answer-meaning">${escapeHtml(readings.meanings.join(', ') || 'No meaning available')}</p>
-               ${readingLinesHtml(readings)}`
-            : '<p class="stat-line">No readings/meaning available.</p>'
-        }
+        <p class="fc-answer-meaning">${escapeHtml(keyword || readings?.meanings.join(', ') || 'No meaning available')}</p>
+        ${keyword && readings?.meanings.length ? `<p class="stat-line">${escapeHtml(readings.meanings.join(', '))}</p>` : ''}
+        ${readings ? readingLinesHtml(readings) : ''}
         <div class="fc-glyph-row">
           <div class="fc-stroke" id="fc-stroke-container"></div>
         </div>
@@ -145,14 +126,15 @@ window.Flashcard = (() => {
     const { char, revealed, dataset, onReveal, onAnswer } = opts;
     const readings = dataset.getReadings(char);
     const description = getDescription(char);
-    const keyword = getKeyword(char);
+    const keyword = dataset.getKeyword(char);
     const rtkNumber = dataset.getRtkNumber(char);
 
     container.innerHTML = `
       <div class="fc-card">
         ${rtkNumber ? `<span class="fc-rtk" title="RTK 6th edition">#${rtkNumber}</span>` : ''}
-        ${frontHtml(opts, readings, description, keyword)}
-        ${revealed ? backHtml(opts, char, readings, description, keyword) : ''}
+        ${revealed
+          ? `<div class="fc-front"><span class="fc-glyph">${char}</span></div>${backHtml(char, readings, description, keyword)}`
+          : frontHtml(opts, readings, description, keyword)}
       </div>
       ${answerBarHtml(revealed)}
     `;
