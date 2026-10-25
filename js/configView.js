@@ -8,6 +8,11 @@
 
 window.ConfigView = (() => {
   const {
+    DEFAULT_THEME_COLOR,
+    getThemeColor,
+    setThemeColor,
+    isLeftHanded,
+    setLeftHanded,
     getPracticeWeights,
     setPracticeWeight,
     getSrsSteps,
@@ -138,6 +143,20 @@ window.ConfigView = (() => {
 
     container.innerHTML = `
       <div class="config-form">
+        <h3>Appearance</h3>
+        <div class="theme-setting">
+          <label for="theme-color">Theme color</label>
+          <input type="color" id="theme-color" value="${getThemeColor()}" />
+          <button type="button" class="theme-reset" id="theme-reset" ${getThemeColor() === DEFAULT_THEME_COLOR ? 'disabled' : ''}>Reset to blue</button>
+        </div>
+        <div class="theme-preview" aria-label="Theme preview: new, mid and mature">
+          <span class="chip band-1" aria-hidden="true">一</span><span class="chip band-2" aria-hidden="true">二</span><span class="chip band-3" aria-hidden="true">三</span>
+        </div>
+
+        <h3>Controls</h3>
+        <label class="preference-toggle"><span>Left-handed mode</span><input type="checkbox" id="left-handed-mode" role="switch" ${isLeftHanded() ? 'checked' : ''} /></label>
+        <p class="stat-line">Places Correct on the left in Practice and SRS.</p>
+
         <h3>SRS steps</h3>
         <p class="stat-line">Days until the next review after each correct answer.</p>
         <div class="steps-editor" id="steps-rows"></div>
@@ -175,6 +194,11 @@ window.ConfigView = (() => {
       </div>
     `;
 
+    container.querySelector('#theme-color').addEventListener('input', (event) => setThemeColor(event.target.value));
+    container.querySelector('#theme-reset').addEventListener('click', () => setThemeColor(DEFAULT_THEME_COLOR));
+    container.querySelector('#left-handed-mode').addEventListener('change', (event) => {
+      setLeftHanded(event.target.checked);
+    });
     renderStepRows();
     container.querySelector('#steps-add').addEventListener('click', addStep);
     container.querySelector('#steps-reset').addEventListener('click', () => {
@@ -200,6 +224,12 @@ window.ConfigView = (() => {
   // An import / folder load can replace the ladder underneath the editor; follow
   // it unless there are unsaved edits (those win until saved or reset).
   onChange(() => {
+    const picker = container.querySelector('#theme-color');
+    if (picker && picker.value !== getThemeColor()) picker.value = getThemeColor();
+    const reset = container.querySelector('#theme-reset');
+    if (reset) reset.disabled = getThemeColor() === DEFAULT_THEME_COLOR;
+    const handedness = container.querySelector('#left-handed-mode');
+    if (handedness) handedness.checked = isLeftHanded();
     const current = getSrsSteps();
     if (current.length === savedSteps.length && current.every((v, i) => v === savedSteps[i])) return;
     const wasDirty = isDirty();

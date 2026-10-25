@@ -6,8 +6,8 @@
 // Plain script (no ES modules), exposed as window.Flashcard — see state.js for why.
 
 window.Flashcard = (() => {
-  const { getDescription } = window.State;
-  const { icons, escapeHtml } = window.Ui;
+  const { getDescription, isLeftHanded, onChange } = window.State;
+  const { icons, escapeHtml, excludeToggleHtml, bindExcludeToggle } = window.Ui;
 
   const MAX_PROMPT_MEANINGS = 3;
 
@@ -87,12 +87,12 @@ window.Flashcard = (() => {
     if (direction === 'meaning') {
       return revealed
         ? `<div class="fc-front"><span class="fc-glyph">${char}</span></div>`
-        : `<button type="button" class="fc-front fc-reveal" aria-label="Reveal answer"><span class="fc-glyph">${char}</span>${hint}</button>`;
+        : `<div class="fc-front"><span class="fc-glyph">${char}</span>${hint}</div>`;
     }
     const prompt = writingPromptHtml(readings, description, keyword);
     return revealed
       ? `<div class="fc-front">${prompt}</div>`
-      : `<div class="fc-front">${prompt}<button type="button" class="fc-reveal-btn">Tap to reveal</button></div>`;
+      : `<div class="fc-front">${prompt}${hint}</div>`;
   };
 
   // Both directions reveal the same complete answer. Only the hidden prompt differs.
@@ -112,12 +112,19 @@ window.Flashcard = (() => {
   };
 
   // Before the reveal only ✓ is offered; ✗ appears once the answer is shown.
-  const answerBarHtml = (revealed) => `
-    <div class="answer-bar">
-      ${revealed ? `<button type="button" class="answer-icon-btn incorrect" data-answer="incorrect" title="Incorrect" aria-label="Incorrect">${icons.crossBold}</button>` : ''}
-      <button type="button" class="answer-icon-btn correct" data-answer="correct" title="Correct" aria-label="Correct">${icons.checkBold}</button>
-    </div>
-  `;
+  const answerBarHtml = (revealed) => {
+    const correct = `<button type="button" class="answer-icon-btn correct" data-answer="correct" title="Correct" aria-label="Correct">${icons.checkBold}</button>`;
+    const incorrect = `<button type="button" class="answer-icon-btn incorrect" data-answer="incorrect" title="Incorrect" aria-label="Incorrect">${icons.crossBold}</button>`;
+    return `<div class="answer-bar">${!revealed ? correct : isLeftHanded() ? correct + incorrect : incorrect + correct}</div>`;
+  };
+
+  // Keep existing sessions in sync too, including keyboard and screen-reader order.
+  onChange(() => {
+    document.querySelectorAll('.answer-bar').forEach((bar) => {
+      const last = bar.querySelector(isLeftHanded() ? '[data-answer="incorrect"]' : '[data-answer="correct"]');
+      if (last) bar.appendChild(last);
+    });
+  });
 
   // Renders the card and its answer bar into `container`.
   // opts: { char, direction: 'meaning'|'writing', revealed, dataset,
@@ -130,7 +137,8 @@ window.Flashcard = (() => {
     const rtkNumber = dataset.getRtkNumber(char);
 
     container.innerHTML = `
-      <div class="fc-card">
+      <div class="fc-test-options">${excludeToggleHtml(char)}</div>
+      <div class="fc-card${revealed ? '' : ' fc-reveal'}"${revealed ? '' : ' role="button" tabindex="0" aria-label="Reveal answer"'}>
         ${rtkNumber ? `<span class="fc-rtk" title="RTK 6th edition">#${rtkNumber}</span>` : ''}
         ${revealed
           ? `<div class="fc-front"><span class="fc-glyph">${char}</span></div>${backHtml(char, readings, description, keyword)}`
@@ -139,8 +147,23 @@ window.Flashcard = (() => {
       ${answerBarHtml(revealed)}
     `;
 
+    bindExcludeToggle(container, char);
+
     if (revealed) window.StrokeOrder.renderInto(container.querySelector('#fc-stroke-container'), char);
-    else container.querySelector('.fc-reveal, .fc-reveal-btn').addEventListener('click', onReveal);
+    else {
+      const card = container.querySelector('.fc-card');
+      card.addEventListener('click', (event) => {
+        if (event.target.closest('.fc-hint-btn')) return;
+        onReveal();
+      });
+      card.addEventListener('keydown', (event) => {
+        if (event.target !== card || event.repeat) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onReveal();
+        }
+      });
+    }
 
     // The hint opens inline; it deliberately does not flip the card.
     const hintBtn = container.querySelector('.fc-hint-btn');

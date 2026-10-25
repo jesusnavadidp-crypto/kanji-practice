@@ -159,7 +159,7 @@
     initDetailPanel(dataset);
     renderRadicalsView(dataset);
     renderKanjiView(dataset);
-    renderTestView(dataset);
+    renderTestView(dataset, () => showView('kanji'));
     renderSrsView(dataset, () => showView('kanji'));
     renderAiTextView(dataset);
     renderConfigView();

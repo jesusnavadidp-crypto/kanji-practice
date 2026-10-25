@@ -12,6 +12,8 @@ window.State = (() => {
   const STORAGE_KEY = 'kanji-radicals:progress';
   const LEGACY_BACKUP_KEY = 'kanji-radicals:progress-v1-backup';
   const VERSION = 2;
+  const DEFAULT_THEME_COLOR = '#2f78cf';
+  const cleanThemeColor = (color) => typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color) ? color.toLowerCase() : DEFAULT_THEME_COLOR;
   const TRACKS = ['meaning', 'writing'];
   const DESCRIPTION_MAX_WORDS = 30;
   const KEYWORD_MAX_LENGTH = 40;
@@ -34,6 +36,7 @@ window.State = (() => {
   const emptyBundle = () => ({
     version: VERSION,
     chars: {},
+    uiSettings: { leftHanded: false, themeColor: DEFAULT_THEME_COLOR },
     practiceSettings: defaultPracticeSettings(),
     srsSettings: { steps: [...DEFAULT_STEPS] },
   });
@@ -54,8 +57,8 @@ window.State = (() => {
     if (!isPlainObject(track)) return newTrack(todayStr);
     return {
       level: Number.isInteger(track.level) && track.level >= 0 ? track.level : 0,
-      lastReviewed: isDateString(track.lastReviewed) ? track.lastReviewed : null,
-      due: isDateString(track.due) ? track.due : todayStr,
+      nextSrsReviewDate: isDateString(track.nextSrsReviewDate) ? track.nextSrsReviewDate
+        : isDateString(track.due) ? track.due : todayStr,
     };
   };
 
@@ -92,6 +95,7 @@ window.State = (() => {
       if (!isPlainObject(record)) continue;
       chars[char] = {
         studying: record.studying === true,
+        excludedFromTests: record.excludedFromTests === true,
         activatedOn: isDateString(record.activatedOn) ? record.activatedOn : null,
         srs: cleanSrs(record.srs, todayStr),
         description: cleanDescription(record.description),
@@ -102,6 +106,7 @@ window.State = (() => {
     return {
       version: VERSION,
       chars,
+      uiSettings: { leftHanded: parsed.uiSettings?.leftHanded === true, themeColor: cleanThemeColor(parsed.uiSettings?.themeColor) },
       practiceSettings: { weights: cleanWeights(parsed.practiceSettings?.weights) },
       srsSettings: { steps: cleanSteps(parsed.srsSettings?.steps) },
     };
@@ -171,7 +176,7 @@ window.State = (() => {
   };
 
   const initial = readLocalStorage();
-  let { chars, practiceSettings, srsSettings } = initial.bundle;
+  let { chars, practiceSettings, srsSettings, uiSettings } = initial.bundle;
   const listeners = new Set();
 
   const persistLocal = () =>
@@ -208,6 +213,10 @@ window.State = (() => {
     updateChar(char, { studying: true, activatedOn: todayStr, srs });
   };
 
+  const isExcludedFromTests = (char) => chars[char]?.excludedFromTests === true;
+
+  const setExcludedFromTests = (char, excluded) => updateChar(char, { excludedFromTests: excluded === true });
+
   const getStudyingChars = () => Object.keys(chars).filter(isStudying);
 
   const getSrs = (char) => chars[char]?.srs || null;
@@ -215,7 +224,7 @@ window.State = (() => {
   const getSrsSteps = () => [...srsSettings.steps];
 
   // Validates again here — never trust the caller. Invalid input is rejected
-  // (returns false), not thrown. Stored `due` dates are untouched: the new
+  // (returns false), not thrown. Stored `nextSrsReviewDate` dates are untouched: the new
   // ladder only applies from the next grading.
   const setSrsSteps = (steps) => {
     if (!isValidSteps(steps)) return false;
@@ -227,7 +236,7 @@ window.State = (() => {
 
   const gradeTrack = (char, trackName, correct) => {
     const srs = getSrs(char);
-    if (!srs || !srs[trackName]) return;
+    if (isExcludedFromTests(char) || !srs || !srs[trackName]) return;
     const graded = grade(srs[trackName], correct, srsSettings.steps, today());
     updateChar(char, { srs: { ...srs, [trackName]: graded } });
   };
@@ -257,7 +266,7 @@ window.State = (() => {
     const cards = [];
     for (const char of getStudyingChars()) {
       // Ignore component-only characters, even if imported progress has SRS tracks.
-      if (!kanjiChars.has(char) || char === '丨' || char === '｜') continue;
+      if (isExcludedFromTests(char) || !kanjiChars.has(char) || char === '丨' || char === '｜') continue;
       const srs = chars[char].srs;
       if (!srs) continue;
       for (const track of TRACKS) {
@@ -270,11 +279,30 @@ window.State = (() => {
   // 0 = not studying, else 1..3. A kanji shows the lower of its two track
   // levels; a studying char with no SRS (a plain radical) is always the top band.
   const getChipBand = (char) => {
+    if (isExcludedFromTests(char)) return 3;
     if (!isStudying(char)) return 0;
     const srs = chars[char].srs;
     return srs
       ? bandForLevel(Math.min(srs.meaning.level, srs.writing.level), srsSettings.steps.length)
       : 3;
+  };
+
+  const getThemeColor = () => uiSettings.themeColor;
+
+  const setThemeColor = (color) => {
+    const next = cleanThemeColor(color);
+    if (next === uiSettings.themeColor) return;
+    uiSettings = { ...uiSettings, themeColor: next };
+    persistLocal();
+    notify();
+  };
+
+  const isLeftHanded = () => uiSettings.leftHanded;
+
+  const setLeftHanded = (enabled) => {
+    uiSettings = { ...uiSettings, leftHanded: enabled === true };
+    persistLocal();
+    notify();
   };
 
   const getPracticeWeights = () => ({ ...practiceSettings.weights });
@@ -286,12 +314,24 @@ window.State = (() => {
   };
 
   // The full persisted shape, for file export/sync — see fileSync.js.
-  const getProgressBundle = () => ({ version: VERSION, chars, practiceSettings, srsSettings });
+  const getProgressBundle = () => ({
+    version: VERSION,
+    chars: Object.fromEntries(Object.entries(chars).map(([char, record]) => {
+      const saved = { ...record };
+      for (const key of ['description', 'keyword', 'rtk', 'excludedFromTests']) {
+        if (!saved[key]) delete saved[key];
+      }
+      return [char, saved];
+    })),
+    practiceSettings,
+    srsSettings,
+    uiSettings,
+  });
 
   // Replaces everything from a loaded/imported file; a legacy file is converted
   // on the way in by the normalizer.
   const replaceProgressBundle = (parsed) => {
-    ({ chars, practiceSettings, srsSettings } = normalizeStoredData(parsed));
+    ({ chars, practiceSettings, srsSettings, uiSettings } = normalizeStoredData(parsed));
     persistLocal();
     notify();
   };
@@ -308,6 +348,8 @@ window.State = (() => {
     countWords,
     isStudying,
     setStudying,
+    isExcludedFromTests,
+    setExcludedFromTests,
     getStudyingChars,
     getSrs,
     getSrsSteps,
@@ -324,6 +366,11 @@ window.State = (() => {
     getActivatedTodayCount,
     getDueCards,
     getChipBand,
+    DEFAULT_THEME_COLOR,
+    getThemeColor,
+    setThemeColor,
+    isLeftHanded,
+    setLeftHanded,
     getPracticeWeights,
     setPracticeWeight,
     getProgressBundle,

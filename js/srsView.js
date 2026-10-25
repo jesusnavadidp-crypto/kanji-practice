@@ -5,7 +5,7 @@
 // Plain script (no ES modules), exposed as window.SrsView — see state.js for why.
 
 window.SrsView = (() => {
-  const { getDueCards, getStudyingChars, getSrs, gradeTrack } = window.State;
+  const { isExcludedFromTests, getDueCards, getStudyingChars, getSrs, gradeTrack } = window.State;
   const { icons, srsTracksHtml } = window.Ui;
   const { today, daysBetween } = window.Srs;
   const { render: renderFlashcard, dedupeAdjacent, shuffle, setBottomTabsHidden } = window.Flashcard;
@@ -36,10 +36,10 @@ window.SrsView = (() => {
   // null when nothing is scheduled.
   const daysUntilNextDue = () => {
     const dues = getStudyingChars()
-      .filter((char) => dataset.isTestEligible(char))
+      .filter((char) => dataset.isTestEligible(char) && !isExcludedFromTests(char))
       .map(getSrs)
       .filter(Boolean)
-      .flatMap((srs) => [srs.meaning.due, srs.writing.due]);
+      .flatMap((srs) => [srs.meaning.nextSrsReviewDate, srs.writing.nextSrsReviewDate]);
     if (dues.length === 0) return null;
     return daysBetween(today(), dues.reduce((min, due) => (due < min ? due : min)));
   };
@@ -83,10 +83,12 @@ window.SrsView = (() => {
     const next = nextDueText(daysUntilNextDue());
     container.innerHTML = `
       <div class="session-empty">
-        <p class="stat-line">Nothing due &mdash; come back tomorrow.</p>
-        ${next ? `<p class="stat-line">${next}</p>` : ''}
+        <h2>No reviews due</h2>
+        ${next ? `<p class="stat-line">${next}</p>` : '<p class="stat-line">Choose some kanji to start learning.</p>'}
+        <button type="button" class="primary-btn" id="srs-browse-btn">Browse kanji</button>
       </div>
     `;
+    container.querySelector('#srs-browse-btn').addEventListener('click', onShowKanjiTab);
   };
 
   const renderReport = () => {
@@ -151,10 +153,16 @@ window.SrsView = (() => {
     startSession();
   };
 
-  // Called on every progress change; only acts while stuck on the empty state
-  // (no session in progress or just finished), so cards that became due
-  // elsewhere (e.g. studying a kanji from another tab) are picked up here.
+  // Prune excluded cards even from a session already underway. Empty sessions
+  // pick up newly enabled or re-included due cards.
   const refreshSrsIfEmpty = () => {
+    const remaining = queue.filter((card) => !isExcludedFromTests(card.char));
+    if (remaining.length !== queue.length) {
+      total -= queue.length - remaining.length;
+      queue = remaining;
+      revealed = false;
+      render();
+    }
     if (queue.length === 0 && !finished) startSession();
   };
 

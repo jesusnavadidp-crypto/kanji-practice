@@ -91,7 +91,7 @@ window.KanjiView = (() => {
           </div>
         `
       )
-      .join('');
+      .join('') || '<div class="session-empty"><h2>No kanji found</h2><p class="stat-line">Try another search or enable Show all.</p></div>';
 
     bindChips(container, (char) => openDetail(char, sortedChars));
 
@@ -118,7 +118,7 @@ window.KanjiView = (() => {
             ${icons.close}
           </button>
         </div>
-        <label><input type="checkbox" id="kanji-show-all" /> Show all kanji (ignore studying gate)</label>
+        <label><input type="checkbox" id="kanji-show-all" /> Show all</label>
         <span class="kanji-count"></span>
       </div>
       <div id="kanji-groups"></div>

@@ -1,7 +1,7 @@
 // The "chunk container" detail panel, shared by radicals and kanji: shows
 // sub-components (drill-down), a link to Jisho for stroke order, the studying
 // switch (top-left of the top bar, no label), and (for actual kanji only — see dataset.isKanjiChar) the SRS track
-// lines and a one-line description note. Both entry types render through the
+// lines where available, plus editable notes and RTK fields for every character. Both entry types render through the
 // same render() function.
 // Plain script (no ES modules), exposed as window.DetailPanel — see state.js for why.
 
@@ -22,7 +22,7 @@ window.DetailPanel = (() => {
     KEYWORD_MAX_LENGTH,
   } = window.State;
   const { today } = window.Srs;
-  const { escapeHtml, chipHtml, bindChips, studyToggleHtml, bindStudyToggle, srsTracksHtml, onHorizontalSwipe } =
+  const { escapeHtml, chipHtml, bindChips, studyToggleHtml, bindStudyToggle, excludeToggleHtml, bindExcludeToggle, srsTracksHtml, onHorizontalSwipe } =
     window.Ui;
 
   const SWIPE_THRESHOLD_PX = 40;
@@ -110,7 +110,7 @@ window.DetailPanel = (() => {
       committingField = true;
       setRtkOverride(char, value);
       committingField = false;
-      content.querySelector('.detail-subtitle').textContent = subtitleFor(char);
+      content.querySelector('.detail-metadata').textContent = subtitleFor(char);
     };
 
     for (const [input, commit] of [
@@ -164,63 +164,44 @@ window.DetailPanel = (() => {
 
     content.innerHTML = `
       <div class="detail-char">${char}</div>
-      <p class="detail-subtitle">${subtitleFor(char)}</p>
+      <div class="detail-subtitle"><span class="detail-metadata">${subtitleFor(char)}</span><a class="jisho-link" href="${jishoUrl(char)}" target="_blank" rel="noopener" aria-label="Look up ${char} on Jisho (opens a new tab)">jisho ↗</a></div>
 
-      ${srs && isStudying(char) ? srsTracksHtml(srs, today()) : ''}
-      ${
-        isKanji
-          ? `<div class="detail-section description-field${countWords(description) > DESCRIPTION_MAX_WORDS ? ' invalid' : ''}">
-              <input type="text" id="description-input" value="${escapeHtml(description)}" placeholder="Your note on this kanji…" aria-label="Description" />
-              <div class="description-counter" id="description-counter">${countWords(description)}/${DESCRIPTION_MAX_WORDS} words</div>
-            </div>
-            <div class="detail-section rtk-row">
-              <input type="text" id="keyword-input" class="rtk-keyword" value="${escapeHtml(getKeyword(char))}" maxlength="${KEYWORD_MAX_LENGTH}" placeholder="${escapeHtml(dataset.getRtk(char)?.keyword || 'RTK keyword')}" aria-label="RTK keyword" />
-              <input type="number" id="rtk-input" class="rtk-number" min="1" max="9999" step="1" value="${rtkOverride ?? ''}" placeholder="${rtkDefault ?? '#'}" aria-label="RTK number (empty uses the default${rtkDefault ? ` #${rtkDefault}` : ''})" />
-            </div>`
-          : ''
-      }
+      <div class="detail-srs">
+        ${excludeToggleHtml(char)}
+        ${srs && isStudying(char) ? srsTracksHtml(srs, today()) : ''}
+      </div>
+      <div class="detail-section detail-notes">
+        <div class="rtk-row">
+          <input type="text" id="keyword-input" class="rtk-keyword" value="${escapeHtml(getKeyword(char))}" maxlength="${KEYWORD_MAX_LENGTH}" placeholder="${escapeHtml(dataset.getRtk(char)?.keyword || 'Keyword')}" aria-label="Keyword" />
+          <input type="number" id="rtk-input" class="rtk-number" min="1" max="9999" step="1" value="${rtkOverride ?? ''}" placeholder="${rtkDefault ?? '#'}" aria-label="RTK number (empty uses the default${rtkDefault ? ` #${rtkDefault}` : ''})" />
+        </div>
+        <div class="description-field${countWords(description) > DESCRIPTION_MAX_WORDS ? ' invalid' : ''}">
+          <input type="text" id="description-input" value="${escapeHtml(description)}" placeholder="Add a note…" aria-label="Description" aria-describedby="description-counter" />
+          <div class="description-counter" id="description-counter">${countWords(description)}/${DESCRIPTION_MAX_WORDS} words</div>
+        </div>
+      </div>
 
-      <div class="detail-section">
+      <div class="detail-section detail-reference">
         <div class="stroke-order-card" id="stroke-order-container"></div>
+        ${readingRows.length ? `<div class="readings-card">${readingRows
+          .map(([label, value]) => `<div class="readings-row"><span>${label}</span><span>${value}</span></div>`)
+          .join('')}</div>` : ''}
       </div>
 
-      ${
-        readingRows.length
-          ? `<div class="detail-section">
-              <div class="readings-card">
-                ${readingRows
-                  .map(([label, value]) => `<div class="readings-row"><span>${label}</span><span>${value}</span></div>`)
-                  .join('')}
-              </div>
-            </div>`
-          : ''
-      }
-
-      <div class="detail-section">
+      ${entry.components.length ? `<div class="detail-section">
         <h3>Sub-components</h3>
-        ${
-          entry.components.length > 0
-            ? `<div class="chip-grid chip-row-scroll">${entry.components.map((c) => chipHtml(c)).join('')}</div>`
-            : '<p class="stat-line">No further decomposition in this dataset.</p>'
-        }
-        ${
-          entry.isRadical
-            ? `<p class="stat-line">Used in ${entry.kanjiUsing.length} kanji.</p>`
-            : ''
-        }
-      </div>
+        <div class="chip-grid chip-row-scroll">${entry.components.map((c) => chipHtml(c)).join('')}</div>
+      </div>` : ''}
 
-      <a class="jisho-link" href="${jishoUrl(char)}" target="_blank" rel="noopener">Open on Jisho ↗</a>
     `;
 
     window.StrokeOrder.renderInto(content.querySelector('#stroke-order-container'), char);
 
     bindStudyToggle(studySlot, (on) => setStudying(char, on, { isKanji }));
 
-    if (isKanji) {
-      bindDescriptionField(char);
-      bindRtkFields(char);
-    }
+    bindExcludeToggle(content, char);
+    bindDescriptionField(char);
+    bindRtkFields(char);
 
     bindChips(content, (char) => {
       stack.push(char);

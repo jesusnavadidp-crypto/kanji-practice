@@ -207,3 +207,65 @@ The vertical-stroke component `丨` (and its `｜` variant) is explicitly exclud
 The main meaning label in both practice modes uses your personal keyword first, the bundled RTK keyword second, and dictionary meanings as the fallback. Dictionary meanings remain visible as supporting detail when a keyword leads.
 
 Revealed flashcards have an identical layout in both directions: character, preferred meaning label, dictionary meanings, on/kun readings, stroke animation and personal note. Only the unrevealed prompt changes with direction.
+
+
+Kanji details include an **Exclude from tests** switch. Exclusion is reversible:
+it skips both Practice and SRS (including retained session cards and the due
+counter), while preserving Studying, component unlocking, notes, levels and
+scheduled dates. Excluded tiles use the deepest blue with a small corner dot;
+turning exclusion off restores the actual level color and existing schedule.
+
+Progress exports omit empty descriptions, keywords and RTK overrides, and omit
+the exclusion flag unless enabled. SRS tracks store `level` and
+`nextSrsReviewDate`; `lastReviewed` is no longer stored. Existing v2 files with
+`due` still import correctly; the next export uses the new name. `activatedOn`
+remains for the activated-today counter. Keep all devices on this app version
+when exchanging the updated files, since older app versions expect `due`.
+
+On mobile, editable fields use at least 16px text to improve readability and
+prevent iPhone focus zoom, while retaining normal pinch zoom.
+
+
+All character detail sheets, including component-only radicals, share editable
+notes, personal keywords, RTK number overrides and the exclusion switch. Missing
+dictionary readings and SRS tracks are omitted; empty sub-component sections
+are hidden. Component-only radicals retain their unlocking role and remain
+outside the test pool. Both Practice and SRS cards also show the same compact
+exclusion switch before and after reveal. Excluding the current character skips
+it without grading and removes its remaining cards from the session.
+
+In both test modes and directions, tap anywhere in the unrevealed card to show
+the answer, or focus it and press Enter/Space. The Hint button only opens the
+note; exclusion and grading controls keep their own actions.
+
+Answer controls use equal-width rounded rectangles below the card, separated
+by a 12px gap. Before reveal, Correct occupies the full row. On phones the
+row stays pinned to the bottom with safe-area padding.
+
+Configurations → Controls includes **Left-handed mode**: Correct appears on
+the left and Incorrect on the right in both test modes. The single Correct
+button remains full-width before reveal. This shared preference is stored as
+`uiSettings.leftHanded`, persists across reloads, and travels with progress
+exports. Existing files default to the standard order.
+
+
+Configurations → Appearance offers one **Theme color** picker with a live
+three-band preview and **Reset to blue**. The chosen color tints the page,
+borders, hover states, links, switches, SRS scale and decorative waves.
+Text and accent colors are darkened as needed for readable contrast; answer
+green/red stay unchanged. The setting is saved in `uiSettings.themeColor` and
+included in progress exports. Older files default to blue. `js/theme.js` loads
+after State and applies the shared CSS variables on startup and state changes.
+
+
+### Minimalist visual refinements
+
+- Character details combine keyword/RTK and notes in one editing group, then
+  combine stroke animation and readings into an unboxed reference section.
+- The note counter appears while editing or when invalid, with its space
+  reserved so the sheet does not jump. Secondary metadata stays subdued.
+- Section spacing follows an 8/16/24px rhythm; decorative waves are quieter.
+- Excluded tiles retain the mature color with a small corner dot.
+- Empty test/review screens offer Browse kanji; empty searches suggest next steps.
+- Shared focus outlines and pressed feedback improve keyboard and touch use.
+- Custom-theme SRS borders have minimum contrast against their tile fills.

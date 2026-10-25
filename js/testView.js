@@ -3,7 +3,7 @@
 // Plain script (no ES modules), exposed as window.TestView — see state.js for why.
 
 window.TestView = (() => {
-  const { isStudying, getChipBand, getPracticeWeights } = window.State;
+  const { isExcludedFromTests, isStudying, getChipBand, getPracticeWeights } = window.State;
   const { icons } = window.Ui;
   const { render: renderFlashcard, dedupeAdjacent, shuffle, setBottomTabsHidden } = window.Flashcard;
 
@@ -12,6 +12,7 @@ window.TestView = (() => {
 
   const container = document.getElementById('test-view');
   let dataset = null;
+  let onShowKanjiTab = () => {};
 
   let currentChar = null;
   let flipped = false;
@@ -35,7 +36,7 @@ window.TestView = (() => {
   const poolByBand = () => {
     const buckets = { new: [], mid: [], mature: [] };
     for (const k of dataset.kanji) {
-      if (!dataset.isTestEligible(k.char) || !isStudying(k.char)) continue;
+      if (!dataset.isTestEligible(k.char) || !isStudying(k.char) || isExcludedFromTests(k.char)) continue;
       buckets[BAND_KEYS[getChipBand(k.char)]].push(k.char);
     }
     return buckets;
@@ -72,6 +73,10 @@ window.TestView = (() => {
       bagIndex = 0;
     }
     if (bag.length === 0) return null;
+    if (isExcludedFromTests(bag[bagIndex]) || !isStudying(bag[bagIndex])) {
+      bag.splice(bagIndex, 1);
+      return dealNext();
+    }
     lastDealt = bag[bagIndex++];
     return lastDealt;
   };
@@ -102,9 +107,12 @@ window.TestView = (() => {
     setBottomTabsHidden(container, false);
     container.innerHTML = `
       <div class="session-empty">
-        <p class="stat-line">Turn on Studying for some kanji to start practicing.</p>
+        <h2>No kanji to practice yet</h2>
+        <p class="stat-line">Choose some kanji and turn on Studying to begin.</p>
+        <button type="button" class="primary-btn" id="test-browse-btn">Browse kanji</button>
       </div>
     `;
+    container.querySelector('#test-browse-btn').addEventListener('click', onShowKanjiTab);
   };
 
   const renderReport = () => {
@@ -163,15 +171,21 @@ window.TestView = (() => {
     renderCard();
   };
 
-  const renderTestView = (loadedDataset) => {
+  const renderTestView = (loadedDataset, showKanjiTab) => {
+    onShowKanjiTab = showKanjiTab;
     dataset = loadedDataset;
     startSession();
   };
 
-  // Called on every progress change; only acts while stuck on the empty state
-  // (no active session to disturb), so a pool that just became non-empty
-  // elsewhere (e.g. studying a kanji from another tab) is picked up here.
+  // Drop excluded cards from the retained bag and current card. An empty
+  // session picks up kanji that have just been included or enabled elsewhere.
   const refreshTestIfEmpty = () => {
+    bag = bag.filter((char, index) => index < bagIndex || !isExcludedFromTests(char));
+    if (!finished && currentChar && isExcludedFromTests(currentChar)) {
+      currentChar = dealNext();
+      flipped = false;
+      render();
+    }
     if (!finished && !currentChar) startSession();
   };
 
