@@ -5,7 +5,7 @@
 // Plain script (no ES modules), exposed as window.Ui — see state.js for why.
 
 window.Ui = (() => {
-  const { getChipBand, getSrsSteps } = window.State;
+  const { getChipBand, getSrsSteps, isExcludedFromTests } = window.State;
   const { bandForLevel, clampLevel, daysBetween } = window.Srs;
 
   // Everything rendered via innerHTML that came from the user (descriptions)
@@ -42,7 +42,7 @@ window.Ui = (() => {
   // The character tile used by every grid in the app (radicals, kanji,
   // sub-components) — always colored by its current band (0 = not studying).
   const chipHtml = (char, { title = '' } = {}) =>
-    `<button class="chip band-${getChipBand(char)}" data-char="${char}"${title ? ` title="${title}"` : ''}>${char}</button>`;
+    `<button class="chip band-${getChipBand(char)}${isExcludedFromTests(char) ? ' excluded' : ''}" aria-label="${escapeHtml(char)}${isExcludedFromTests(char) ? ' — excluded from tests' : ''}" data-char="${char}"${title ? ` title="${title}"` : ''}>${char}</button>`;
 
   const bindChips = (root, onSelect) => {
     root.querySelectorAll('.chip').forEach((chip) => {
@@ -54,7 +54,8 @@ window.Ui = (() => {
   // studying/SRS change, without rebuilding the DOM.
   const refreshChipBands = (root) => {
     root.querySelectorAll('.chip').forEach((chip) => {
-      chip.className = `chip band-${getChipBand(chip.dataset.char)}`;
+      chip.className = `chip band-${getChipBand(chip.dataset.char)}${isExcludedFromTests(chip.dataset.char) ? ' excluded' : ''}`;
+      chip.setAttribute('aria-label', `${chip.dataset.char}${isExcludedFromTests(chip.dataset.char) ? ' — excluded from tests' : ''}`);
     });
   };
 
@@ -78,13 +79,22 @@ window.Ui = (() => {
     toggle.addEventListener('click', () => onToggle(toggle.getAttribute('aria-checked') !== 'true'));
   };
 
+  const excludeToggleHtml = (char) =>
+    `<label class="exclude-toggle"><span>Exclude from tests</span><input type="checkbox" class="exclude-tests" role="switch" ${isExcludedFromTests(char) ? 'checked' : ''} /></label>`;
+
+  const bindExcludeToggle = (root, char) => {
+    root.querySelector('.exclude-tests').addEventListener('change', (event) => {
+      window.State.setExcludedFromTests(char, event.target.checked);
+    });
+  };
+
   const TRACK_LABELS = [
     ['meaning', '意', 'Meaning'],
     ['writing', '書', 'Writing'],
   ];
 
   const dueText = (track, todayStr) => {
-    const days = daysBetween(todayStr, track.due);
+    const days = daysBetween(todayStr, track.nextSrsReviewDate);
     return days <= 0 ? 'today' : `in ${days}d`;
   };
 
@@ -139,6 +149,8 @@ window.Ui = (() => {
     bindChips,
     refreshChipBands,
     studyToggleHtml,
+    excludeToggleHtml,
+    bindExcludeToggle,
     bindStudyToggle,
     srsTracksHtml,
     onHorizontalSwipe,

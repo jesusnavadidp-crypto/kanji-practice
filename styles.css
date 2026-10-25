@@ -4,8 +4,8 @@
   --ink: #262433;
   --muted: #7b7788;
   --border: #d6dfee;
-  --accent: #6c63ff;
-  --accent-soft: #ecebff;
+  --accent: #2464b1;
+  --accent-soft: var(--band-1-bg);
   --hover: #dde5f2;
 
   /* The bottom tab bar's own (non-safe-area) height — referenced by anything
@@ -70,9 +70,11 @@ body::before {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  opacity: 0.06;
+  opacity: 0.025;
   background-repeat: repeat;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='20'%3E%3Cpath d='M0 20a20 20 0 0 1 40 0' fill='none' stroke='%23378add' stroke-width='1.5'/%3E%3Cpath d='M-20 20a20 20 0 0 1 40 0' fill='none' stroke='%23378add' stroke-width='1.5'/%3E%3Cpath d='M20 20a20 20 0 0 1 40 0' fill='none' stroke='%23378add' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-color: var(--pastel-blue-line);
+  mask-repeat: repeat;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='20'%3E%3Cpath d='M0 20a20 20 0 0 1 40 0' fill='none' stroke='%23378add' stroke-width='1.5'/%3E%3Cpath d='M-20 20a20 20 0 0 1 40 0' fill='none' stroke='%23378add' stroke-width='1.5'/%3E%3Cpath d='M20 20a20 20 0 0 1 40 0' fill='none' stroke='%23378add' stroke-width='1.5'/%3E%3C/svg%3E");
 }
 
 .app-header {
@@ -318,11 +320,11 @@ button.counter-badge.due {
   border: 1px solid var(--border);
   border-radius: 14px;
   box-shadow: 0 16px 40px rgba(38, 36, 51, 0.14);
-  padding: 8px;
-  min-width: 240px;
+  padding: 6px;
+  min-width: 224px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
   z-index: 20;
 }
 
@@ -333,11 +335,13 @@ button.counter-badge.due {
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   border: none;
   background: none;
-  padding: 12px;
-  border-radius: 10px;
+  padding: 8px 10px;
+  min-height: 40px;
+  line-height: 20px;
+  border-radius: 8px;
   font-size: 14px;
   color: var(--ink);
   cursor: pointer;
@@ -359,14 +363,25 @@ button.counter-badge.due {
 .sync-status {
   color: var(--muted);
   font-size: 12px;
-  padding: 8px 12px 2px;
-  min-height: 16px;
+  padding: 2px 10px 4px;
+  line-height: 16px;
+}
+
+.sync-status:empty {
+  display: none;
 }
 
 .menu-divider {
   border: none;
   border-top: 1px solid var(--border);
-  margin: 4px 0;
+  margin: 4px 10px;
+}
+
+@media (max-width: 700px) {
+  .menu-item {
+    min-height: 44px;
+    padding-block: 10px;
+  }
 }
 
 /* The two full-view forms (AI Text, Configurations) share one centered column. */
@@ -850,7 +865,7 @@ main {
   text-align: center;
   color: var(--muted);
   font-size: 13px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 /* The "Studying" switch: label on the left, track + thumb on the right (the
@@ -987,7 +1002,7 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: -14px;
+  margin-top: 0;
 }
 
 .rtk-row input {
@@ -1022,9 +1037,7 @@ main {
 
 .readings-card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 4px 14px;
+  padding: 0;
 }
 
 .readings-row {
@@ -1045,9 +1058,7 @@ main {
 
 .stroke-order-card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
+  padding: 8px 0 16px;
 }
 
 .jisho-link {
@@ -1066,7 +1077,7 @@ main {
 }
 
 .detail-section {
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .primary-btn {
@@ -1081,7 +1092,7 @@ main {
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .stat-line {
@@ -1108,7 +1119,7 @@ main {
 .stroke-order-replay svg {
   width: 180px;
   height: 180px;
-  background: var(--accent-soft);
+  background: var(--band-1-bg);
   border-radius: 14px;
 }
 
@@ -1176,12 +1187,14 @@ main {
   gap: 8px;
 }
 
-button.fc-reveal {
-  width: 100%;
-  border: none;
-  background: none;
-  padding: 0;
+/* The entire unrevealed card is the same generous target in both directions. */
+.fc-card.fc-reveal {
   cursor: pointer;
+}
+
+.fc-card.fc-reveal:focus-visible {
+  outline: 2px solid var(--band-3-border);
+  outline-offset: 3px;
 }
 
 .fc-glyph {
@@ -1216,7 +1229,6 @@ button.fc-reveal {
   margin: 0;
 }
 
-.fc-reveal-btn,
 .fc-hint-btn {
   border: 1px solid var(--border);
   background: var(--surface);
@@ -1227,7 +1239,6 @@ button.fc-reveal {
   cursor: pointer;
 }
 
-.fc-reveal-btn:hover,
 .fc-hint-btn:hover {
   background: var(--hover);
 }
@@ -1292,9 +1303,7 @@ button.fc-reveal {
 .answer-bar {
   display: flex;
   justify-content: center;
-  /* Deliberately wide: these are graded taps after a recall attempt, so a
-     mis-tap between them is worse than most mis-taps in the app. */
-  gap: 56px;
+  gap: 12px;
 }
 
 @media (max-width: 700px) {
@@ -1311,7 +1320,7 @@ button.fc-reveal {
     background: var(--surface);
     border-top: 1px solid var(--border);
     padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
-    gap: 40px;
+    gap: 12px;
   }
 
   #test-view,
@@ -1321,9 +1330,10 @@ button.fc-reveal {
 }
 
 .answer-icon-btn {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 56px;
+  border-radius: 12px;
   border: none;
   cursor: pointer;
   display: flex;
@@ -1371,4 +1381,272 @@ button.fc-reveal {
 
 .app-footer a {
   color: var(--muted);
+}
+
+/* A quiet marker distinguishes excluded tiles without changing the blue scale. */
+.chip.excluded {
+  position: relative;
+}
+
+.chip.excluded::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.exclude-toggle,
+.preference-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.exclude-toggle input,
+.preference-toggle input {
+  appearance: none;
+  width: 36px;
+  height: 22px;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--border);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.exclude-toggle input::before,
+.preference-toggle input::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin: 2px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: transform 0.15s;
+}
+
+.exclude-toggle input:checked,
+.preference-toggle input:checked {
+  background: var(--band-3-border);
+  border-color: var(--band-3-border);
+}
+
+.exclude-toggle input:checked::before,
+.preference-toggle input:checked::before {
+  transform: translateX(14px);
+}
+
+@media (max-width: 700px) {
+  /* Readable fields also prevent iOS focus zoom. Keep pinch zoom available. */
+  body input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  body textarea,
+  body select {
+    font-size: 16px;
+    max-width: 100%;
+    scroll-margin-block: 64px;
+  }
+
+  .rtk-number {
+    flex-basis: 90px;
+    width: 90px;
+  }
+
+  .detail-panel {
+    max-height: 100dvh;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Share the compact exclusion control across detail and both test directions. */
+.fc-test-options {
+  width: 100%;
+  max-width: 520px;
+  margin-inline: auto;
+}
+
+.fc-test-options .exclude-toggle {
+  margin-bottom: 4px;
+}
+
+
+.theme-setting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+
+.theme-setting input[type="color"] {
+  width: 44px;
+  height: 44px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.theme-reset {
+  min-height: 44px;
+  background: none;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+}
+
+.theme-reset:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.theme-preview {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.theme-preview .chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* One quiet editing group, followed by one reference group. */
+.detail-notes {
+  display: grid;
+  gap: 8px;
+}
+
+.detail-notes .rtk-keyword {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.detail-notes .rtk-number {
+  color: var(--muted);
+}
+
+.description-counter {
+  visibility: hidden;
+  min-height: 14px;
+}
+
+.description-field:focus-within .description-counter,
+.description-field.invalid .description-counter {
+  visibility: visible;
+}
+
+.detail-reference {
+  padding-block: 8px;
+}
+
+.readings-row span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.detail-section h3 {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.session-empty h2 {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.session-empty .primary-btn {
+  margin-top: 16px;
+}
+
+/* Consistent focus and touch feedback, without adding permanent decoration. */
+:where(button, input, textarea, select, a):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+:where(button, .menu-item):active:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :where(button, .menu-item) {
+    transition: background-color 120ms ease, filter 120ms ease;
+  }
+}
+
+/* Keep supporting controls with the information they affect. */
+.detail-subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.detail-subtitle .jisho-link {
+  display: inline-flex;
+  padding: 4px 0;
+  min-height: 32px;
+  font-size: 12px;
+}
+
+.detail-srs {
+  padding: 4px 12px 12px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.detail-srs .exclude-toggle {
+  margin: 0;
+}
+
+.detail-srs .srs-tracks {
+  margin: 0;
+  padding: 4px 0 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.detail-notes {
+  margin-bottom: 20px;
+}
+
+.detail-notes .description-field {
+  position: relative;
+}
+
+.detail-notes .description-counter {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  font-size: 11px;
+}
+
+.detail-reference {
+  padding-block: 0;
+}
+
+.detail-reference .stroke-order-card {
+  padding-top: 0;
 }

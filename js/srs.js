@@ -50,15 +50,15 @@ window.Srs = (() => {
   const daysBetween = (fromStr, toStr) => Math.round((parse(toStr) - parse(fromStr)) / 86400000);
 
   // ISO date strings sort lexicographically, so plain comparison works.
-  const isDue = (track, todayStr) => track.due <= todayStr;
+  const isDue = (track, todayStr) => track.nextSrsReviewDate <= todayStr;
 
-  const newTrack = (todayStr, level = 0) => ({ level, lastReviewed: null, due: todayStr });
+  const newTrack = (todayStr, level = 0) => ({ level, nextSrsReviewDate: todayStr });
 
   // Returns a new track; never mutates the one passed in.
   const grade = (track, correct, steps, todayStr) => {
-    if (!correct) return { level: 0, lastReviewed: todayStr, due: todayStr };
+    if (!correct) return { level: 0, nextSrsReviewDate: todayStr };
     const level = Math.min(clampLevel(track.level, steps.length) + 1, steps.length);
-    return { level, lastReviewed: todayStr, due: addDays(todayStr, steps[level - 1]) };
+    return { level, nextSrsReviewDate: addDays(todayStr, steps[level - 1]) };
   };
 
   // Color / practice-weight band, relative to the ladder length so the colors
