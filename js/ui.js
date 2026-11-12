@@ -128,18 +128,24 @@ window.Ui = (() => {
   const onHorizontalSwipe = (el, thresholdPx, onSwipe) => {
     let startX = 0;
     let startY = 0;
+    let tracking = false;
 
     el.addEventListener('touchstart', (e) => {
+      tracking = e.touches.length === 1 && !e.target.closest('input, textarea, select, button, a, [contenteditable], .chip-row-scroll');
+      if (!tracking) return;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
     });
 
     el.addEventListener('touchend', (e) => {
+      if (!tracking || e.touches.length > 0) return;
+      tracking = false;
       const deltaX = e.changedTouches[0].clientX - startX;
       const deltaY = e.changedTouches[0].clientY - startY;
       if (Math.abs(deltaX) < thresholdPx || Math.abs(deltaX) < Math.abs(deltaY) * 1.5) return;
       onSwipe(deltaX < 0 ? 1 : -1);
     });
+    el.addEventListener('touchcancel', () => { tracking = false; });
   };
 
   return {

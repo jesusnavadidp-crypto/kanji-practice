@@ -42,7 +42,11 @@
           </svg>
           <span>Practice Test</span>
         </button>
-        <button id="config-menu-btn" class="menu-item" title="Tune the Practice Test draw mix and convert an old progress file">
+        <button id="progress-menu-btn" class="menu-item" title="RTK, JLPT and daily progress">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h16M7 16v-4m5 4V8m5 8V4" stroke-linecap="round"/></svg>
+          <span>Progress</span>
+        </button>
+        <button id="config-menu-btn" class="menu-item" title="Appearance, daily goal, controls and SRS settings">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-linejoin="round"/>
@@ -90,6 +94,7 @@
     <section id="srs-view" class="view hidden"></section>
     <section id="test-view" class="view hidden"></section>
     <section id="ai-text-view" class="view hidden"></section>
+    <section id="progress-view" class="view hidden"></section>
     <section id="config-view" class="view hidden"></section>
   </main>
 
@@ -111,6 +116,7 @@
     </button>
   </nav>
 
+  <div id="goal-celebration" class="goal-celebration hidden" role="status" aria-live="polite"></div>
   <div id="toast" class="toast"></div>
 
   <button id="scroll-top-btn" class="scroll-top-btn hidden" aria-label="Scroll to top">
@@ -174,6 +180,7 @@
   <script src="js/srsView.js"></script>
   <script src="js/aiText.js"></script>
   <script src="js/configView.js"></script>
+  <script src="js/progressView.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

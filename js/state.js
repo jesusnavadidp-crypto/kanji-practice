@@ -26,18 +26,19 @@ window.State = (() => {
   // init call from app.js.
   const kanjiChars = new Set((window.KANJI_DATA || []).map((k) => k.char));
 
-  // Legacy rank (1/2/3) -> SRS level the migrated tracks start at, and the
-  // legacy test weight key -> its band name.
+  // Legacy rank (1/2/3) -> SRS level the migrated tracks start at.
   const LEGACY_LEVELS = { 1: 0, 2: 2, 3: 4 };
-  const LEGACY_WEIGHT_KEYS = { 1: 'new', 2: 'mid', 3: 'mature' };
-
-  const defaultPracticeSettings = () => ({ weights: { new: 50, mid: 30, mature: 20 } });
+  const cleanPreset = (value) => ['single', 'halloween', 'christmas'].includes(value) ? value : 'single';
+  const cleanGoal = (value) => Number.isInteger(value) && value >= 0 && value <= 999 ? value : 5;
+  const cleanActivity = (value) => Object.fromEntries(Object.entries(isPlainObject(value) ? value : {})
+    .filter(([date]) => isDateString(date)).map(([date, chars]) => [date, [...new Set((Array.isArray(chars) ? chars : [])
+      .filter((char) => kanjiChars.has(char) && char !== '丨' && char !== '｜'))]]));
 
   const emptyBundle = () => ({
     version: VERSION,
     chars: {},
-    uiSettings: { leftHanded: false, themeColor: DEFAULT_THEME_COLOR },
-    practiceSettings: defaultPracticeSettings(),
+    uiSettings: { leftHanded: false, themeColor: DEFAULT_THEME_COLOR, themePreset: 'single', dailyGoal: 5 },
+    dailyActivity: {},
     srsSettings: { steps: [...DEFAULT_STEPS] },
   });
 
@@ -67,16 +68,6 @@ window.State = (() => {
       ? { meaning: cleanTrack(srs.meaning, todayStr), writing: cleanTrack(srs.writing, todayStr) }
       : null;
 
-  const cleanWeights = (weights) => {
-    const defaults = defaultPracticeSettings().weights;
-    const cleaned = { ...defaults };
-    for (const key of Object.keys(defaults)) {
-      const value = weights?.[key];
-      if (typeof value === 'number' && Number.isFinite(value) && value >= 0) cleaned[key] = value;
-    }
-    return cleaned;
-  };
-
   // Same rules as the editor (Srs.isValidSteps); anything else falls back to the default ladder.
   const cleanSteps = (steps) => (isValidSteps(steps) ? [...steps] : [...DEFAULT_STEPS]);
 
@@ -95,6 +86,7 @@ window.State = (() => {
       if (!isPlainObject(record)) continue;
       chars[char] = {
         studying: record.studying === true,
+        studiedBefore: record.studiedBefore === true || record.studying === true || Boolean(record.srs) || Boolean(record.activatedOn),
         excludedFromTests: record.excludedFromTests === true,
         activatedOn: isDateString(record.activatedOn) ? record.activatedOn : null,
         srs: cleanSrs(record.srs, todayStr),
@@ -106,8 +98,8 @@ window.State = (() => {
     return {
       version: VERSION,
       chars,
-      uiSettings: { leftHanded: parsed.uiSettings?.leftHanded === true, themeColor: cleanThemeColor(parsed.uiSettings?.themeColor) },
-      practiceSettings: { weights: cleanWeights(parsed.practiceSettings?.weights) },
+      uiSettings: { leftHanded: parsed.uiSettings?.leftHanded === true, themeColor: cleanThemeColor(parsed.uiSettings?.themeColor), themePreset: cleanPreset(parsed.uiSettings?.themePreset), dailyGoal: cleanGoal(parsed.uiSettings?.dailyGoal) },
+      dailyActivity: cleanActivity(parsed.dailyActivity),
       srsSettings: { steps: cleanSteps(parsed.srsSettings?.steps) },
     };
   };
@@ -142,11 +134,6 @@ window.State = (() => {
       else summary.radicals += 1;
     }
 
-    const legacyWeights = parsed.testSettings?.weights;
-    const weights = {};
-    for (const [rank, key] of Object.entries(LEGACY_WEIGHT_KEYS)) weights[key] = legacyWeights?.[rank];
-    bundle.practiceSettings = { weights: cleanWeights(weights) };
-
     return { bundle, legacy: true, summary };
   };
 
@@ -176,7 +163,7 @@ window.State = (() => {
   };
 
   const initial = readLocalStorage();
-  let { chars, practiceSettings, srsSettings, uiSettings } = initial.bundle;
+  let { chars, srsSettings, uiSettings, dailyActivity } = initial.bundle;
   const listeners = new Set();
 
   const persistLocal = () =>
@@ -203,14 +190,18 @@ window.State = (() => {
 
   const isStudying = (char) => chars[char]?.studying === true;
 
-  // Turning on stamps today's date (feeds the "activated today" counter) and,
-  // for a kanji that has none yet, creates both SRS tracks. Turning off keeps
+  // Turning on preserves activation metadata and records first-time daily activity;
+  // for a kanji that has none yet, it creates both SRS tracks. Turning off keeps
   // the SRS data and description so re-enabling resumes where it left off.
   const setStudying = (char, on, { isKanji = false } = {}) => {
     if (!on) return updateChar(char, { studying: false });
     const todayStr = today();
     const srs = chars[char]?.srs || (isKanji ? { meaning: newTrack(todayStr), writing: newTrack(todayStr) } : null);
-    updateChar(char, { studying: true, activatedOn: todayStr, srs });
+    const prior = chars[char];
+    if (isKanji && kanjiChars.has(char) && char !== '丨' && char !== '｜' && !prior?.studiedBefore && !prior?.srs && !prior?.activatedOn) {
+      dailyActivity = { ...dailyActivity, [todayStr]: [...new Set([...(dailyActivity[todayStr] || []), char])] };
+    }
+    updateChar(char, { studying: true, studiedBefore: true, activatedOn: todayStr, srs });
   };
 
   const isExcludedFromTests = (char) => chars[char]?.excludedFromTests === true;
@@ -287,12 +278,26 @@ window.State = (() => {
       : 3;
   };
 
+  const getDailyGoal = () => uiSettings.dailyGoal;
+  const getDailyCount = () => (dailyActivity[today()] || []).length;
+  const setDailyGoal = (value) => {
+    uiSettings = { ...uiSettings, dailyGoal: cleanGoal(value) };
+    persistLocal();
+    notify();
+  };
+  const getThemePreset = () => uiSettings.themePreset;
+  const setThemePreset = (value) => {
+    uiSettings = { ...uiSettings, themePreset: cleanPreset(value) };
+    persistLocal();
+    notify();
+  };
+
   const getThemeColor = () => uiSettings.themeColor;
 
   const setThemeColor = (color) => {
     const next = cleanThemeColor(color);
-    if (next === uiSettings.themeColor) return;
-    uiSettings = { ...uiSettings, themeColor: next };
+    if (next === uiSettings.themeColor && uiSettings.themePreset === 'single') return;
+    uiSettings = { ...uiSettings, themeColor: next, themePreset: 'single' };
     persistLocal();
     notify();
   };
@@ -301,14 +306,6 @@ window.State = (() => {
 
   const setLeftHanded = (enabled) => {
     uiSettings = { ...uiSettings, leftHanded: enabled === true };
-    persistLocal();
-    notify();
-  };
-
-  const getPracticeWeights = () => ({ ...practiceSettings.weights });
-
-  const setPracticeWeight = (band, value) => {
-    practiceSettings = { weights: { ...practiceSettings.weights, [band]: value } };
     persistLocal();
     notify();
   };
@@ -323,15 +320,15 @@ window.State = (() => {
       }
       return [char, saved];
     })),
-    practiceSettings,
     srsSettings,
     uiSettings,
+    dailyActivity,
   });
 
   // Replaces everything from a loaded/imported file; a legacy file is converted
   // on the way in by the normalizer.
   const replaceProgressBundle = (parsed) => {
-    ({ chars, practiceSettings, srsSettings, uiSettings } = normalizeStoredData(parsed));
+    ({ chars, srsSettings, uiSettings, dailyActivity } = normalizeStoredData(parsed));
     persistLocal();
     notify();
   };
@@ -367,12 +364,15 @@ window.State = (() => {
     getDueCards,
     getChipBand,
     DEFAULT_THEME_COLOR,
+    getDailyGoal,
+    setDailyGoal,
+    getDailyCount,
+    getThemePreset,
+    setThemePreset,
     getThemeColor,
     setThemeColor,
     isLeftHanded,
     setLeftHanded,
-    getPracticeWeights,
-    setPracticeWeight,
     getProgressBundle,
     replaceProgressBundle,
     convertLegacyBundle,
