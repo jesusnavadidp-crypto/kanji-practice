@@ -4,7 +4,7 @@
 
 (() => {
   const { loadDataset } = window.Data;
-  const { onChange, getActivatedTodayCount, getDueCards } = window.State;
+  const { onChange, getDailyCount, getDailyGoal, getDueCards } = window.State;
   const { initFileSync } = window.FileSync;
   const { initDetailPanel, refreshDetailIfOpen } = window.DetailPanel;
   const { renderRadicalsView, refreshRadicals } = window.RadicalsView;
@@ -22,6 +22,7 @@
     test: document.getElementById('test-view'),
     aiText: document.getElementById('ai-text-view'),
     config: document.getElementById('config-view'),
+    progress: document.getElementById('progress-view'),
   };
 
   // The two primary tabs, in swipe order — SRS Review, Test and AI Text are menu-triggered
@@ -91,14 +92,36 @@
 
   // Header counters + the pending-reviews dot on ☰. Dates come from Srs.today(),
   // so re-reading State is enough after a day rollover.
+  let previousDailyCount = getDailyCount();
+  let previousDay = window.Srs.today();
+  let celebrationTimer;
   const refreshCounters = () => {
-    const activated = getActivatedTodayCount();
+    const activated = getDailyCount();
+    const goal = getDailyGoal();
+    const day = window.Srs.today();
+    const celebrationKey = `kanji-radicals:goal-celebrated:${day}`;
+    if (day !== previousDay) previousDailyCount = 0;
+    if (goal > 0 && activated >= goal && previousDailyCount < goal && activated > previousDailyCount) {
+      let celebrated = false;
+      try { celebrated = localStorage.getItem(celebrationKey) === 'yes'; } catch {}
+      if (!celebrated) {
+        try { localStorage.setItem(celebrationKey, 'yes'); } catch {}
+        const celebration = document.getElementById('goal-celebration');
+        celebration.textContent = '✦ Daily goal complete! ✦';
+        celebration.classList.remove('hidden');
+        clearTimeout(celebrationTimer);
+        celebrationTimer = setTimeout(() => celebration.classList.add('hidden'), 3500);
+      }
+    }
+    previousDailyCount = activated;
+    previousDay = day;
     const due = getDueCards().length;
     const activatedBadge = document.getElementById('activated-badge');
-    activatedBadge.innerHTML = `${icons.pencil}${activated}`;
+    activatedBadge.innerHTML = `${icons.pencil}${activated}${goal ? `/${goal}` : ''}`;
     activatedBadge.classList.toggle('muted', activated === 0);
-    activatedBadge.title = `${activated} kanji activated today`;
-    activatedBadge.setAttribute('aria-label', `${activated} kanji activated today`);
+    activatedBadge.classList.toggle('goal-complete', goal > 0 && activated >= goal);
+    activatedBadge.title = `${activated} new kanji studied today${goal ? `; goal ${goal}` : ''}`;
+    activatedBadge.setAttribute('aria-label', activatedBadge.title);
     const dueBadge = document.getElementById('due-badge');
     dueBadge.innerHTML = `${icons.repeat}${due}`;
     dueBadge.classList.toggle('muted', due === 0);
@@ -142,6 +165,12 @@
       showTestView();
     });
 
+    document.getElementById('progress-menu-btn').addEventListener('click', () => {
+      menu.classList.add('hidden');
+      window.ProgressView.refresh();
+      showView('progress');
+    });
+
     document.getElementById('config-menu-btn').addEventListener('click', () => {
       menu.classList.add('hidden');
       showView('config');
@@ -163,8 +192,13 @@
     renderSrsView(dataset, () => showView('kanji'));
     renderAiTextView(dataset);
     renderConfigView();
+    window.ProgressView.init(dataset);
 
     refreshCounters();
+    setInterval(() => {
+      refreshCounters();
+      window.ProgressView.refresh();
+    }, 60000);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') refreshCounters();
     });

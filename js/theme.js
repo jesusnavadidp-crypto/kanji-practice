@@ -1,6 +1,6 @@
 // One saved accent, shared across all views. Answer green/red remain semantic.
 window.Theme = (() => {
-  const { getThemeColor, DEFAULT_THEME_COLOR, onChange } = window.State;
+  const { getThemeColor, getThemePreset, DEFAULT_THEME_COLOR, onChange } = window.State;
   const rgb = (hex) => hex.match(/[0-9a-f]{2}/gi).map((part) => parseInt(part, 16));
   const hex = (values) => '#' + values.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
   const mix = (color, target, amount) => hex(rgb(color).map((v, i) => v + (rgb(target)[i] - v) * amount));
@@ -33,7 +33,9 @@ window.Theme = (() => {
     return values;
   };
   const apply = () => {
-    const color = getThemeColor();
+    const preset = getThemePreset();
+    document.documentElement.dataset.theme = preset;
+    const color = { halloween: '#b85b12', christmas: '#226746' }[preset] || getThemeColor();
     const values = palette(color);
     for (const [key, value] of Object.entries(values)) {
       // Reset preserves the original blue scale; links now share its hue too.

@@ -1,14 +1,11 @@
-// "Test" tab: flashcard-style drill over the kanji you're studying, drawn by
-// SRS band. Practice only reads progress — it never grades an SRS track.
+// Practice Test drills studying kanji in uniform shuffled cycles.
+// Practice never grades an SRS track.
 // Plain script (no ES modules), exposed as window.TestView — see state.js for why.
 
 window.TestView = (() => {
-  const { isExcludedFromTests, isStudying, getChipBand, getPracticeWeights } = window.State;
+  const { isExcludedFromTests, isStudying } = window.State;
   const { icons } = window.Ui;
   const { render: renderFlashcard, dedupeAdjacent, shuffle, setBottomTabsHidden } = window.Flashcard;
-
-  // Chip band (1..3) -> the practice weight key that governs it.
-  const BAND_KEYS = { 1: 'new', 2: 'mid', 3: 'mature' };
 
   const container = document.getElementById('test-view');
   let dataset = null;
@@ -20,52 +17,16 @@ window.TestView = (() => {
   let incorrectCount = 0;
   let finished = false;
 
-  // Practice should skew toward what's least solid: a Learning kanji should
-  // come up much more often than a Known one. Draws are dealt from a small
-  // shuffled "bag" built to this ratio (configurable — see Configurations in
-  // the ☰ menu), rather than plain weighted random, so the ratio holds even
-  // within a short session instead of only converging to it over a long one.
-  const BAG_SIZE = 10;
-
+  // Uniform coverage: each eligible character appears once per shuffled cycle.
+  // Practice reads eligibility only and never grades or reads SRS maturity.
   let bag = [];
   let bagIndex = 0;
   let lastDealt = null;
-
-  // Studying kanji only, bucketed by band (new / mid / mature).
-  // Iterating kanji excludes component-only entries, but keeps kanji that are also radicals.
-  const poolByBand = () => {
-    const buckets = { new: [], mid: [], mature: [] };
-    for (const k of dataset.kanji) {
-      if (!dataset.isTestEligible(k.char) || !isStudying(k.char) || isExcludedFromTests(k.char)) continue;
-      buckets[BAND_KEYS[getChipBand(k.char)]].push(k.char);
-    }
-    return buckets;
-  };
-
-  // Builds a BAG_SIZE-slot deck matching the configured band weights (relative,
-  // needn't sum to 100 — normalized below), dropping any band with no
-  // candidates and renormalizing the rest so their weight isn't wasted.
-  const buildBag = () => {
-    const buckets = poolByBand();
-    const weights = getPracticeWeights();
-    const bands = Object.keys(buckets).filter((band) => buckets[band].length > 0 && weights[band] > 0);
-    if (bands.length === 0) return [];
-
-    const totalWeight = bands.reduce((sum, band) => sum + weights[band], 0);
-    const newBag = [];
-    let assigned = 0;
-    bands.forEach((band, i) => {
-      const isLast = i === bands.length - 1;
-      const slots = isLast ? BAG_SIZE - assigned : Math.round((BAG_SIZE * weights[band]) / totalWeight);
-      assigned += slots;
-      const candidates = buckets[band];
-      for (let n = 0; n < slots; n++) {
-        newBag.push(candidates[Math.floor(Math.random() * candidates.length)]);
-      }
-    });
-
-    return dedupeAdjacent(shuffle(newBag), lastDealt);
-  };
+  const eligibleChars = () => dataset.kanji
+    .filter((k) => dataset.isTestEligible(k.char) && isStudying(k.char) && !isExcludedFromTests(k.char))
+    .map((k) => k.char);
+  let poolSignature = '';
+  const buildBag = () => dedupeAdjacent(shuffle(eligibleChars()), lastDealt);
 
   const dealNext = () => {
     if (bagIndex >= bag.length) {
@@ -82,6 +43,9 @@ window.TestView = (() => {
   };
 
   const startSession = () => {
+    bag = [];
+    bagIndex = 0;
+    poolSignature = eligibleChars().join('');
     correctCount = 0;
     incorrectCount = 0;
     finished = false;
@@ -180,8 +144,13 @@ window.TestView = (() => {
   // Drop excluded cards from the retained bag and current card. An empty
   // session picks up kanji that have just been included or enabled elsewhere.
   const refreshTestIfEmpty = () => {
-    bag = bag.filter((char, index) => index < bagIndex || !isExcludedFromTests(char));
-    if (!finished && currentChar && isExcludedFromTests(currentChar)) {
+    const signature = eligibleChars().join('');
+    if (signature !== poolSignature) {
+      poolSignature = signature;
+      bag = shuffle(eligibleChars().filter((char) => char !== currentChar));
+      bagIndex = 0;
+    }
+    if (!finished && currentChar && (isExcludedFromTests(currentChar) || !isStudying(currentChar))) {
       currentChar = dealNext();
       flipped = false;
       render();

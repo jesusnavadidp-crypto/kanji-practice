@@ -12,7 +12,7 @@ A minimal, static, offline-first app for drilling Japanese radicals and kanji:
 - Click any character to open its detail sheet: the **Studying** switch (top-left
   of the sheet, no label), the character (with its `RTK #N` when it has one), an animated stroke-order diagram (tap it to replay) in its own
   card, a merged readings card (concept/kun'yomi/on'yomi, when known), sub-components (if any, drill in recursively — a horizontal scroll
-  row, not a wrapping grid), and a Jisho link. For a kanji it also shows the two
+  row on desktop and a wrapping grid on phones), and a Jisho link. For a kanji it also shows the two
   SRS track lines, a per-kanji description (one line, up to 30 words, live
   counter) and, right under it, an optional RTK keyword and an RTK number override
   (empty = the KANJIDIC2 number shown as its placeholder). From the Kanji tab, move to the next/previous kanji without closing
@@ -28,8 +28,7 @@ A minimal, static, offline-first app for drilling Japanese radicals and kanji:
   1·3·7·14·30·60 days (configurable): ✓ moves up one step, ✗ goes back to 0 and the
   card is re-queued. A card is
   due by calendar day, not by hour. The session ends with a "done for today" report.
-- **Practice Test** (in the ☰ menu) — free draw from your studying kanji, weighted
-  by SRS band (new/mid/mature). It never changes SRS.
+- **Practice Test** (in the ☰ menu) — uniform shuffled cycles through your studying kanji. Every eligible kanji appears once before the next cycle; adjacent repeats across cycles are avoided when possible. It never changes SRS.
 - **RTK keyword and number** — per kanji, both optional. The number you enter
   replaces the KANJIDIC2 one everywhere (detail subtitle, card corner, and the
   Radicals/Kanji ordering). On the Writing front the keyword, when set, is the
@@ -39,13 +38,11 @@ A minimal, static, offline-first app for drilling Japanese radicals and kanji:
   top-right corner when the kanji has one; the front offers only ✓ (I knew it); tap
   to reveal below the front, then ✗ and ✓ are both available. The back shows the
   glyph as written beside the stroke-order canvas, plus your description.
-- **Header counters** — two compact badges left of ☰: kanji activated today (a
-  plain count, no goal) and reviews due (tap to open SRS Review), plus a dot on ☰
+- **Header counters** — two compact badges left of ☰: new kanji studied today with a configurable daily goal and reviews due (tap to open SRS Review), plus a dot on ☰
   while reviews are pending.
 - **Configurations** (in the ☰ menu) — the SRS steps editor (add/remove steps, 1–12
   steps of 1–365 days, strictly increasing; nothing is stored until Save, "Reset to
-  default" restores 1·3·7·14·30·60), practice weights by band, and "Convert old
-  progress file" for pre-SRS progress files. Changing the ladder never moves existing
+  default" restores 1·3·7·14·30·60), appearance presets, controls, and a daily new-kanji goal (default 5; 0 disables it). Legacy files still convert automatically on import. Changing the ladder never moves existing
   schedules: it applies from the next review, and a level above a shortened ladder
   counts as its last step.
 - **AI Text** (in the ☰ menu) — builds a writing-practice prompt for an LLM
@@ -78,8 +75,7 @@ consistent as the app grows:
   source of "state" color: neutral = not studying, bands 1–3 run light → deep
   with SRS maturity (bands are relative to the ladder length, so the colors keep
   their meaning with any ladder; the 6-step default gives levels 0–1 / 2–3 / 4–6).
-  Chips, the Studying switch, the track bars and the
-  Configurations swatches all reference them; a new state-colored element reuses
+  Chips, the Studying switch, the track bars and theme previews all reference them; a new state-colored element reuses
   a band, not a new hex value. Band 1 must read as more marked than a white
   chip, so it leans on its thicker border, not just the fill. The pastel
   green/red are only for answer actions (✓/✗), never states, and there is no red
@@ -249,7 +245,7 @@ button remains full-width before reveal. This shared preference is stored as
 exports. Existing files default to the standard order.
 
 
-Configurations → Appearance offers one **Theme color** picker with a live
+Configurations → Appearance offers **Single color**, **Halloween**, and **Christmas** presets. Seasonal presets tint the UI and use quiet decorative patterns; choosing a custom color returns to Single color. The **Theme color** picker has a live
 three-band preview and **Reset to blue**. The chosen color tints the page,
 borders, hover states, links, switches, SRS scale and decorative waves.
 Text and accent colors are darkened as needed for readable contrast; answer
@@ -269,3 +265,31 @@ after State and applies the shared CSS variables on startup and state changes.
 - Empty test/review screens offer Browse kanji; empty searches suggest next steps.
 - Shared focus outlines and pressed feedback improve keyboard and touch use.
 - Custom-theme SRS borders have minimum contrast against their tile fills.
+
+
+### Progress and daily goal
+
+Open **Progress** from the options menu for RTK Volume 1 (sixth edition, 2,200 kanji)
+coverage and separate JLPT N5–N1 summaries. Counts are derived from Studying and
+actual Meaning/Writing SRS levels, including excluded kanji; personal RTK number
+overrides never change catalog membership. Mature means the final SRS band.
+
+The daily goal counts each kanji only on its first studying activation. Component-only
+radicals, review answers, Practice answers, and repeated activations do not count.
+Existing files retain their progress and begin with empty daily history. The header
+shows today's count/target and celebrates completion once per day on that browser,
+with reduced-motion support. Configure the target under Configurations → Daily goal.
+The default is 5; set 0 to disable. `dailyActivity`, `studiedBefore`, `uiSettings.dailyGoal`
+and `uiSettings.themePreset` travel with exports. Older app versions do not retain
+these new fields when re-exporting; keep devices updated to preserve daily history.
+Obsolete practice weights are ignored on import and omitted from new exports.
+
+Practice uses uniform shuffled cycles rather than SRS weights. This provides even
+coverage; use SRS Review for scheduled reinforcement. Changing eligibility updates
+the pool, and Start New Test starts a fresh shuffled cycle. A one-kanji pool necessarily
+repeats. The user-facing legacy conversion control has been removed; automatic
+legacy import support remains.
+
+Run the focused regression suite with `node tests/regression.cjs` (Node.js required).
+It covers practice coverage and SRS isolation, eligibility changes, daily accounting,
+JSON compatibility, progress denominators and gesture handling.
